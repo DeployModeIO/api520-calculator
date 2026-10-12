@@ -1,0 +1,16 @@
+# Dependencias (por si se añade Electron u otras herramientas de desarrollo)
+node_modules/
+
+# Artefactos de empaquetado
+dist/
+out/
+*.exe
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
