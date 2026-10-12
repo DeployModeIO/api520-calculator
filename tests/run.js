@@ -217,6 +217,29 @@ t('Vapor: P2 ≥ P1 lanza error "P1"', () => {
   assert.throws(() => A.dimensionarVapor({ W: 1000, set: 100, sobrepresionPct: 10, P2: 200, T: 400, saturado: true, Kc: 1, tipoValvula: 'convencional' }), /P1/);
 });
 
+// ---- Ecuación subcrítica exacta API 520 (F2/735) ----
+
+t('Subcrítica manual: k=1.4, P1=114.7, P2=100 → F2≈0.9289, A≈0.7746 → H', () => {
+  const p = { W: 5000, P1: 114.7, P2: 100, T: 520, Z: 1, M: 29, k: 1.4, Kd: 0.975, Kc: 1 };
+  const sub = A.areaRequeridaGasSubcritica(p);
+  assert.ok(Math.abs(sub.F2 - 0.928911) / 0.928911 <= 0.005, 'F2=' + sub.F2);
+  assert.ok(Math.abs(sub.area - 0.77459) / 0.77459 <= 0.005, 'A=' + sub.area);
+  const o = A.seleccionarOrificio(sub.area);
+  assert.equal(o.letra, 'H');
+  const Wreal = A.capacidadRealGasSubcritica(0.785, p);
+  assert.ok(Math.abs(Wreal - 5067.3) / 5067.3 <= 0.005, 'Wreal=' + Wreal);
+});
+
+t('Continuidad: en r = rc la fórmula subcrítica (735) coincide con la crítica (520) ±2 %', () => {
+  // P1 = 114.7 psia: set 90.9091 × 1.10 + 14.7 = 114.7; Pcf = 60.594
+  const critico = A.dimensionarGas({ W: 5000, set: 90.9091, sobrepresionPct: 10, P2: 60.59, T: 520, Z: 1, M: 29, k: 1.4, Kc: 1, tipoValvula: 'convencional' });
+  const sub = A.dimensionarGas({ W: 5000, set: 90.9091, sobrepresionPct: 10, P2: 60.62, T: 520, Z: 1, M: 29, k: 1.4, Kc: 1, tipoValvula: 'convencional' });
+  assert.equal(critico.flujo, 'CRITICO');
+  assert.equal(sub.flujo, 'SUBCRITICO');
+  assert.ok(Math.abs(sub.areaRequerida / critico.areaRequerida - 1) <= 0.02,
+    'A_sub=' + sub.areaRequerida + ' A_crit=' + critico.areaRequerida);
+});
+
 // ---- Ejecución ----
 let ok = 0;
 let fail = 0;

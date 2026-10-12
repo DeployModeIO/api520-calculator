@@ -173,7 +173,7 @@
       refs.oC.textContent = fmt(r.C, 2);
       refs.oKb.textContent = fmt(r.Kb, 3) + ' (' + tipoLabel + ')';
       refs.oPcf.textContent = fmt(r.Pcf, 2) + ' psia';
-      refs.oExtra.textContent = t('na_gas');
+      refs.oExtra.textContent = r.F2 !== null ? 'F2 ' + fmt(r.F2, 4) + ' (subcrítico)' : t('na_gas');
     } else if (r.modo === 'vapor') {
       refs.oWreal.textContent = fmt(Math.round(r.Wreal), 0) + ' lb/hr';
       refs.oC.textContent = t('na_liq');

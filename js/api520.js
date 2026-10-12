@@ -79,10 +79,37 @@
     return 0.86;
   }
 
+  // Flujo SUBCRÍTICO — ecuación exacta API 520 Parte I (Secc. 5.4/5.6):
+  //   A  = W / (735·F2·Kd·Kc) · sqrt( Z·T / (M·P1·(P1−P2)) )   [US: lb/hr, psia, °R, in²]
+  //   F2 = sqrt( (k/(k−1)) · r^(2/k) · (1 − r^((k−1)/k)) / (1 − r) ),  r = P2/P1
+  // La constante 735 es la forma USC; la SI equivalente es 17.9 (kg/h, kPa, mm²).
+  // Verificado: continuidad exacta en r = rc (Δ 0.05 % frente a la fórmula crítica
+  // C = 520·f(k)) y coincidencia con la aproximación isentrópica (Δ 0.02 %).
+  // En flujo subcrítico la contrapresión ya está incorporada en F2 y ΔP → Kb = 1.0
+  // (API indica verificar selección de válvula con el fabricante en este régimen).
+  function f2Subcritico(k, r) {
+    assertNum(k, 'k');
+    assertNum(r, 'r');
+    if (k <= 1.0) throw new Error('k debe ser > 1.0');
+    if (!(r > 0 && r < 1)) throw new Error('r = P2/P1 debe estar entre 0 y 1');
+    return Math.sqrt((k / (k - 1)) * Math.pow(r, 2 / k) * ((1 - Math.pow(r, (k - 1) / k)) / (1 - r)));
+  }
+
+  function areaRequeridaGasSubcritica(p) {
+    const r = p.P2 / p.P1;
+    const F2 = f2Subcritico(p.k, r);
+    const A = (p.W / (735 * F2 * p.Kd * p.Kc)) * Math.sqrt((p.Z * p.T) / (p.M * p.P1 * (p.P1 - p.P2)));
+    return { area: A, F2: F2 };
+  }
+
+  function capacidadRealGasSubcritica(Aorificio, p) {
+    const F2 = f2Subcritico(p.k, p.P2 / p.P1);
+    return (735 * F2 * Aorificio * p.Kd * p.Kc) / Math.sqrt((p.Z * p.T) / (p.M * p.P1 * (p.P1 - p.P2)));
+  }
+
   // Área efectiva requerida de descarga — gases/vapores (in²), flujo crítico.
   // A = (W / (C*Kd*P1*Kb*Kc)) * sqrt(T*Z/M)
-  function areaRequeridaGas(p) {
-    const W = assertNum(p.W, 'W');
+  function areaRequeridaGas(p) {    const W = assertNum(p.W, 'W');
     const P1 = assertNum(p.P1, 'P1');
     const T = assertNum(p.T, 'T');
     const M = assertNum(p.M, 'M');
@@ -211,31 +238,34 @@
     const critico = i.P2 <= Pcf;
 
     const pctBP = critico ? (i.contrapresionPct || 0) : (i.P2 / P1) * 100;
-    const Kb = factorKb(pctBP, i.tipoValvula, i.sobrepresionPct);
-    const base = { W: i.W, P1: P1, T: i.T, Z: i.Z, M: i.M, k: i.k, Kd: i.Kd || 0.975, Kb: Kb, Kc: i.Kc };
+    const KbCritico = factorKb(pctBP, i.tipoValvula, i.sobrepresionPct);
+    const Kd = i.Kd || 0.975;
 
-    let A = areaRequeridaGas(base);
-
-    // Flujo subcrítico: aproximación isentrópica — escala el área por la
-    // razón de flujo másico relativo al MÁXIMO (en r_crit = Pcf/P1).
-    let flujoRatio = 1;
-    if (!critico) {
-      const r = i.P2 / P1;
-      const rc = Pcf / P1; // relación crítica de presión (no 2/(k+1))
-      const f = Math.pow(r, 2 / i.k) - Math.pow(r, (i.k + 1) / i.k);
-      const fc = Math.pow(rc, 2 / i.k) - Math.pow(rc, (i.k + 1) / i.k);
-      flujoRatio = f / fc;
-      A = A / Math.sqrt(flujoRatio);
+    let A, F2 = null, Kb;
+    if (critico) {
+      Kb = KbCritico;
+      A = areaRequeridaGas({ W: i.W, P1: P1, T: i.T, Z: i.Z, M: i.M, k: i.k, Kd: Kd, Kb: Kb, Kc: i.Kc });
+    } else {
+      // Ecuación exacta API 520 flujo subcrítico (F2/735): la contrapresión ya
+      // está incorporada en F2 y ΔP → Kb = 1.0 en este régimen.
+      Kb = 1.0;
+      const sub = areaRequeridaGasSubcritica({ W: i.W, P1: P1, P2: i.P2, T: i.T, Z: i.Z, M: i.M, k: i.k, Kd: Kd, Kc: i.Kc });
+      A = sub.area;
+      F2 = sub.F2;
     }
 
     const orificio = seleccionarOrificio(A);
-    let Wreal = capacidadRealGas(orificio.area, base);
-    if (!critico) Wreal = Wreal * Math.sqrt(flujoRatio);
+    let Wreal;
+    if (critico) {
+      Wreal = capacidadRealGas(orificio.area, { P1: P1, T: i.T, Z: i.Z, M: i.M, k: i.k, Kd: Kd, Kb: Kb, Kc: i.Kc });
+    } else {
+      Wreal = capacidadRealGasSubcritica(orificio.area, { P1: P1, P2: i.P2, T: i.T, Z: i.Z, M: i.M, k: i.k, Kd: Kd, Kc: i.Kc });
+    }
 
     return {
       modo: 'gas',
       P1: P1, Pcf: Pcf, flujo: critico ? 'CRITICO' : 'SUBCRITICO',
-      C: coeficienteExpansionC(i.k), Kb: Kb, KbPct: pctBP,
+      C: coeficienteExpansionC(i.k), F2: F2, Kb: Kb, KbPct: pctBP,
       areaRequerida: A, orificio: orificio, Wreal: Wreal,
       usoPct: (A / orificio.area) * 100, margenPct: orificio.margenPct,
       unidades: { W: 'lb/hr', P: 'psia', T: 'R', A: 'in2' },
@@ -272,6 +302,9 @@
     factorKsh: factorKsh,
     dimensionarVapor: dimensionarVapor,
     areaRequeridaGas: areaRequeridaGas,
+    areaRequeridaGasSubcritica: areaRequeridaGasSubcritica,
+    capacidadRealGasSubcritica: capacidadRealGasSubcritica,
+    f2Subcritico: f2Subcritico,
     capacidadRealGas: capacidadRealGas,
     areaRequeridaLiquido: areaRequeridaLiquido,
     kvViscosidad: kvViscosidad,

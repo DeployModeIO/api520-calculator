@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.0 (2026-10-12)
+
+- **Flujo subcrítico de gases**: implementada la ecuación EXACTA de API 520 Parte I `A = W/(735·F2·Kd·Kc)·√(ZT/(M·P1·(P1−P2)))` con coeficiente `F2` (constante SI equivalente 17.9). Reemplaza la aproximación isentrópica de v1.1. Continuidad verificada en el punto crítico (Δ 0.05 % frente a la fórmula de flujo crítico C=520·f(k)) y validada con caso manual F2=0.9289 / A=0.7746 in² → orificio H.
+- En régimen subcrítico, Kb = 1.0 por definición de la ecuación (la contrapresión ya está incorporada en F2 y ΔP), y F2 se muestra en resultados y en la hoja de especificación.
+
 ## v1.1.0 (2026-10-12)
 
 ### Verificado contra fuentes especializadas (sin acceso a los estándares originales)

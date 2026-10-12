@@ -58,6 +58,9 @@
       L.push(campo(ds('ds_z'), entrada.Z.toFixed(2)));
       L.push(campo(ds('ds_c'), r.C.toFixed(2)));
       L.push(campo(ds('ds_kb'), r.Kb.toFixed(3)));
+      if (r.F2 !== null && r.F2 !== undefined) {
+        L.push(campo('F2 (subcritico)', r.F2.toFixed(4) + ' · Kb=1.0 (API: F2 incorpora la contrapresion)'));
+      }
     } else if (r.modo === 'vapor') {
       L.push(campo(ds('ds_ksh'), r.Ksh.toFixed(3) + (entrada.saturado ? ' (saturado)' : ' (' + entrada.temp + ' F)')));
       L.push(campo(ds('ds_kb'), r.Kb.toFixed(3)));
