@@ -41,22 +41,28 @@
     return P1 * Math.pow(2 / (k + 1), k / (k - 1));
   }
 
-  // Factor de corrección por contrapresión Kb.
-  // Convencional en flujo crítico: 1.0. Fuelle balanceado: interpolación lineal
-  // de curvas API 520 Parte I (APROXIMACIÓN editable, % de contrapresión).
-  // Pilotada (POSRV): 1.0 — la presión de ajuste no es afectada por la
-  // contrapresión acumulada (verificar límites del fabricante).
-  const KB_FUELLE = [[0, 1.0], [10, 0.99], [20, 0.97], [30, 0.95], [40, 0.91], [50, 0.86]];
-  function factorKb(pctContrapresion, tipoValvula) {
-    if (tipoValvula === 'pilot') return 1.0;
-    if (tipoValvula !== 'fuelle') return 1.0;
+  // Factor de corrección por contrapresión Kb (gas/vapor).
+  // Convencional en flujo crítico: 1.0. Pilotada (POSRV): 1.0 — la presión de
+  // ajuste no es afectada por la contrapresión acumulada (verificar límites del
+  // fabricante). Fuelle balanceado: curva API 520 Parte I (Fig. 30) dependiente
+  // de la sobrepresión, interpolación lineal (APROXIMACIÓN editable):
+  //   · 10 % sobrepresión: curva estándar (lectura secundaria publicada)
+  //   · 21 % (fuego):      Kb = 1.0 hasta 50 % de contrapresión (verificado)
+  //   · 16 % (múltiples):  interpolación entre ambas — aproximación documentada
+  const KB_FUELLE_10 = [[0, 1.0], [10, 0.99], [20, 0.97], [30, 0.95], [40, 0.91], [50, 0.86]];
+  function factorKb(pctContrapresion, tipoValvula, sobrepresionPct) {
+    if (tipoValvula === 'pilot' || tipoValvula !== 'fuelle') return 1.0;
+    const op = sobrepresionPct || 10;
     const pct = Math.min(50, Math.max(0, pctContrapresion || 0));
-    for (let i = 1; i < KB_FUELLE.length; i++) {
-      const x0 = KB_FUELLE[i - 1][0], y0 = KB_FUELLE[i - 1][1];
-      const x1 = KB_FUELLE[i][0], y1 = KB_FUELLE[i][1];
-      if (pct <= x1) return y0 + ((y1 - y0) * (pct - x0)) / (x1 - x0);
+    let kb10 = 0.86;
+    for (let i = 1; i < KB_FUELLE_10.length; i++) {
+      const x0 = KB_FUELLE_10[i - 1][0], y0 = KB_FUELLE_10[i - 1][1];
+      const x1 = KB_FUELLE_10[i][0], y1 = KB_FUELLE_10[i][1];
+      if (pct <= x1) { kb10 = y0 + ((y1 - y0) * (pct - x0)) / (x1 - x0); break; }
     }
-    return 0.86;
+    if (op >= 21) return 1.0;
+    const f = Math.min(1, Math.max(0, (op - 10) / 11)); // 0→curva 10 %, 1→curva 21 %
+    return kb10 + (1.0 - kb10) * f;
   }
 
   // Kw — corrección por contrapresión en servicio LÍQUIDO (API 520 Parte I,
@@ -110,27 +116,34 @@
     return (Q / (38 * p.Kd * p.Kw * p.Kc * p.Kv)) * Math.sqrt(G / dP);
   }
 
-  // Correlación publicada para el factor de viscosidad Kv (API 520 Parte I,
-  // APROXIMACIÓN en función del número de Reynolds).
+  // Correlación publicada en API 520 Parte I para el factor de viscosidad Kv
+  // en función del número de Reynolds (Kv = 1.0 para Re ≥ 10^6).
+  // Fuente: https://help.technicaltoolboxes.com/knowledge-base/api-520-relief-valves-requiring-capacity-certification/
   function kvViscosidad(Re) {
     if (!(Re > 0)) return 1.0;
-    const inv = 0.9942 + 2.8788 * Math.pow(Re, -0.2847) + 340.6 * Math.pow(Re, -0.9111);
-    return 1 / inv;
+    const inv = 0.9935 + 2.878 / Math.sqrt(Re) + 342.75 / Math.pow(Re, 1.5);
+    return Math.min(1.0, 1 / inv);
   }
 
   // Método iterativo API para líquidos con corrección por viscosidad.
-  // Re (API 520, unidades prácticas) = 3160 * Q * G / (d * mu)  [Q GPM, d in, mu cP]
+  // Procedimiento API 520: el Reynolds se evalúa con el área del orificio
+  // estándar inmediatamente superior al área requerida:
+  //   Re = 2800 · Q · G / (μ · √A_orificio)   [Q GPM, μ cP, A in²]
   function areaLiquidoConViscosidad(p) {
     let Kv = 1.0;
     let A = 0;
     let Re = 0;
-    for (let i = 0; i < 3; i++) {
+    let orificio = null;
+    for (let i = 0; i < 4; i++) {
       A = areaRequeridaLiquido({ Q: p.Q, G: p.G, dP: p.dP, Kd: p.Kd, Kw: p.Kw, Kc: p.Kc, Kv: Kv });
-      const d = Math.sqrt((4 * A) / Math.PI);
-      Re = (3160 * p.Q * p.G) / (d * (p.mu || 0.3));
-      Kv = kvViscosidad(Re);
+      orificio = seleccionarOrificio(A);
+      Re = (2800 * p.Q * p.G) / ((p.mu || 0.3) * Math.sqrt(orificio.area));
+      const nuevo = kvViscosidad(Re);
+      const listo = Math.abs(nuevo - Kv) < 1e-4;
+      Kv = nuevo;
+      if (listo) break;
     }
-    return { area: A, Kv: Kv, Re: Re };
+    return { area: A, Kv: Kv, Re: Re, orificio: orificio };
   }
 
   /* ---------- selección de orificio API 526 ---------- */
@@ -154,7 +167,7 @@
     const critico = i.P2 <= Pcf;
 
     const pctBP = critico ? (i.contrapresionPct || 0) : (i.P2 / P1) * 100;
-    const Kb = factorKb(pctBP, i.tipoValvula);
+    const Kb = factorKb(pctBP, i.tipoValvula, i.sobrepresionPct);
     const base = { W: i.W, P1: P1, T: i.T, Z: i.Z, M: i.M, k: i.k, Kd: i.Kd || 0.975, Kb: Kb, Kc: i.Kc };
 
     let A = areaRequeridaGas(base);
@@ -194,7 +207,7 @@
     const pctBPliq = (i.P2 / P1) * 100;
     const Kw = (i.Kw === undefined || i.Kw === null || isNaN(i.Kw)) ? factorKw(pctBPliq, i.tipoValvula) : i.Kw;
     const r = areaLiquidoConViscosidad({ Q: i.Q, G: i.G, dP: P1 - i.P2, Kd: i.Kd || 0.65, Kw: Kw, Kc: i.Kc, mu: i.mu });
-    const orificio = seleccionarOrificio(r.area);
+    const orificio = r.orificio; // el orificio con el que convergió el Reynolds
     return {
       modo: 'liquido',
       P1: P1, flujo: 'LIQUIDO',

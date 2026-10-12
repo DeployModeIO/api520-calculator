@@ -66,7 +66,21 @@ Tokens en `:root` (`css/styles.css`): fondo `#f5f6f8`, tarjetas `#ffffff`, navy 
 
 Herramienta de apoyo. Los factores de curva (Kb de fuelle, Kw de fuelle, Kv de viscosidad) son **aproximaciones documentadas de las curvas API 520 Parte I** y son editables. Validar siempre contra las ediciones vigentes de API STD 520 / 526 y los datos del fabricante de la válvula.
 
-## Fuentes de referencia (tipos de válvula y terminología)
+## Fuentes de referencia (verificación 2026-10-12)
 
-- Wikipedia — *Relief valve* (terminología PRV/PSV/RV/SRV/POSRV, blowdown, estándares API 520/521/526, ASME VIII, ISO 4126): https://en.wikipedia.org/wiki/Relief_valve
-- Wikipedia — *Pilot-operated relief valve* (funcionamiento snap-acting vs modulating, ventajas frente a contrapresión alta): https://en.wikipedia.org/wiki/Pilot-operated_relief_valve
+Fórmulas, constantes, tabla API 526, factores de corrección y propiedades de fluidos verificados contra:
+
+- Technical Toolboxes Knowledge Center — *API 520 – Relief Valves Requiring Capacity Certification* (fórmula de líquido con constante 38, regla Kw por tipo de válvula, correlación Kv `(0.9935 + 2.878/√Re + 342.75/Re^1.5)^−1`, Re = 2800·Q·G/(μ·√A)): https://help.technicaltoolboxes.com/knowledge-base/api-520-relief-valves-requiring-capacity-certification/
+- Neutrium — *Relief Valve Orifice Area to API RP 526* (tabla D–T exacta): https://neutrium.net/articles/equipment/relief-valve-orifice-area-to-api-rp-526/
+- ProcessTools — *Relief Valve Sizing Theory* (fórmulas gas/líquido/vapor, Kd 0.975/0.65, sobrepresión 10/16/21 %): https://processtools.app/relief-valve/theory
+- FlowMachinery — *PRV Orifice Sizing per API 526 Guide* (P1 = set×1.10 + atm, regla de 3 % de pérdida de entrada): https://flowmachinery.com/valves/pressure-relief-valve-orifice
+- Wikipedia — *Choked flow* (relación crítica, γ de gases vía Perry's Table 2-166), *Relief valve* (terminología PRV/PSV/RV/SRV/POSRV), *Pilot-operated relief valve* (snap vs modulating), *Gasoline*, *Diesel fuel*, *Jet fuel*, *Ethane*: https://en.wikipedia.org/wiki/Choked_flow , https://en.wikipedia.org/wiki/Relief_valve , https://en.wikipedia.org/wiki/Pilot-operated_relief_valve
+- Engineering ToolBox — *Molecular weights of gases/vapors* y *Specific heat ratios*: https://www.engineeringtoolbox.com/molecular-weight-gas-vapor-d_1156.html
+- Cheresources (foro de expertos) — límite de fuelle ≤50 % BP y Kb=1.0 a 21 % de sobrepresión (Fig. 30 API 520 7ª ed.): https://www.cheresources.com/invision/topic/15761-back-pressure-correction-factor-for-balanced-bellows-psv/
+
+### Correcciones aplicadas tras la verificación
+
+1. Correlación Kv: sustituida por la publicada en API 520 (antes una fit con exponentes incorrectos).
+2. Reynolds: ahora evalúa el área del orificio estándar seleccionado (procedimiento API).
+3. Kb de fuelle: curva dependiente de la sobrepresión (10 %→curva Fig. 30; 21 %→1.0 hasta 50 %; 16 %→interpolación documentada).
+4. Etano G líquida 0.36→0.544 (544 kg/m³ a −88.5 °C); Jet A1 M 150→170 y μ 1.7→1.4 cP; diésel G 0.85→0.84 (EN 590).

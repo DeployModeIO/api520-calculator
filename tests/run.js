@@ -143,6 +143,44 @@ t('i18n: diccionarios ES/EN con claves idénticas y no vacías', () => {
   assert.equal(I18N.t('estado_sistema'), 'OPERATIVO');
 });
 
+// ---- Correcciones tras verificación con fuentes (2026-10-12) ----
+
+t('Kv API 520 corregida: (0.9935 + 2.878/√Re + 342.75/Re^1.5)^-1, tope 1.0', () => {
+  const k100 = A.kvViscosidad(100);
+  assert.ok(Math.abs(k100 - 0.6158) / 0.6158 <= 0.02, 'Re=100 → ' + k100);
+  const k1000 = A.kvViscosidad(1000);
+  assert.ok(Math.abs(k1000 - 0.9130) / 0.9130 <= 0.01, 'Re=1000 → ' + k1000);
+  assert.ok(Math.abs(A.kvViscosidad(1e4) - 0.9768) / 0.9768 <= 0.01, 'Re=1e4');
+  assert.equal(A.kvViscosidad(1e6), 1.0, 'Re≥1e6 → Kv=1.0 (tope API)');
+});
+
+t('Kb fuelle dependiente de sobrepresión: 10 %→curva, 21 %→1.0, 16 %→interpolada', () => {
+  assert.ok(Math.abs(A.factorKb(30, 'fuelle', 10) - 0.95) <= 0.0095, '10% OP');
+  assert.equal(A.factorKb(50, 'fuelle', 21), 1.0, '21% OP (fuego) → Kb=1 hasta 50%');
+  assert.equal(A.factorKb(30, 'fuelle', 21), 1.0, '21% OP → Kb=1');
+  const kb16 = A.factorKb(30, 'fuelle', 16);
+  assert.ok(kb16 > 0.95 && kb16 < 1.0, '16% OP debe estar entre ambas curvas: ' + kb16);
+  // sin arg → comportamiento clásico (10 %)
+  assert.ok(Math.abs(A.factorKb(50, 'fuelle') - 0.86) <= 0.0086);
+});
+
+t('Re líquido con área del orificio seleccionado (procedimiento API 520)', () => {
+  const r = A.dimensionarLiquido({ Q: 500, G: 0.85, set: 100, sobrepresionPct: 10, P2: 29.4, mu: 4, Kc: 1, tipoValvula: 'fuelle' });
+  const esperado = (2800 * 500 * 0.85) / (4 * Math.sqrt(r.orificio.area));
+  assert.ok(Math.abs(r.Re - esperado) / esperado <= 0.01, 'Re=' + r.Re + ' vs ' + esperado);
+  assert.ok(r.orificio.area >= r.areaRequerida, 'orificio debe cubrir área requerida');
+});
+
+t('Correcciones de fluidos: etano G=0.544, Jet A1 M=170 μ=1.4, diésel G=0.84', () => {
+  const etano = FLUIDOS.find(function (f) { return f.id === 'etano'; });
+  const jeta1 = FLUIDOS.find(function (f) { return f.id === 'jeta1'; });
+  const diesel = FLUIDOS.find(function (f) { return f.id === 'diesel'; });
+  assert.equal(etano.GLiquido, 0.544, 'etano G (Wikipedia: 544 kg/m3 a −88.5 C)');
+  assert.equal(jeta1.M, 170, 'Jet A1 M (mezcla C8-C16)');
+  assert.equal(jeta1.muLiquido, 1.4, 'Jet A1 μ @20°C (≈1.75 cSt × ρ 0.8)');
+  assert.equal(diesel.GLiquido, 0.84, 'Diésel G (EN590 0.820–0.845)');
+});
+
 // ---- Ejecución ----
 let ok = 0;
 let fail = 0;
