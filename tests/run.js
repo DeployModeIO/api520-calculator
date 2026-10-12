@@ -76,6 +76,13 @@ t('Kb fuelle (interpolación): 0%→1.0, 30%→0.95, 50%→0.86', () => {
   assert.equal(A.factorKb(10, 'convencional'), 1.0);
 });
 
+t('Regresión: dimensionarGas SIN Kd explícito usa 0.975 y no produce NaN', () => {
+  const r = A.dimensionarGas({ W: 5000, set: 100, sobrepresionPct: 10, P2: 14.7, T: 559.67, Z: 1, M: 18.5, k: 1.25, Kc: 1, tipoValvula: 'convencional' });
+  assert.ok(isFinite(r.areaRequerida) && r.areaRequerida > 0, 'A=' + r.areaRequerida);
+  assert.equal(r.flujo, 'CRITICO');
+  assert.ok(r.orificio.area >= r.areaRequerida);
+});
+
 // ---- Ejecución ----
 let ok = 0;
 let fail = 0;

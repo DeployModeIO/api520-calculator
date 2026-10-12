@@ -138,7 +138,7 @@
 
     const pctBP = critico ? (i.contrapresionPct || 0) : (i.P2 / P1) * 100;
     const Kb = factorKb(pctBP, i.tipoValvula);
-    const base = { W: i.W, P1: P1, T: i.T, Z: i.Z, M: i.M, k: i.k, Kd: i.Kd, Kb: Kb, Kc: i.Kc };
+    const base = { W: i.W, P1: P1, T: i.T, Z: i.Z, M: i.M, k: i.k, Kd: i.Kd || 0.975, Kb: Kb, Kc: i.Kc };
 
     let A = areaRequeridaGas(base);
 
@@ -173,7 +173,7 @@
     const P1 = i.set + i.set * (i.sobrepresionPct / 100) + 14.7;
     if (i.P2 >= P1) throw new Error('P1 debe ser > P2 (la contrapresión supera la presión de alivio)');
     const Kw = i.Kw || 1.0;
-    const r = areaLiquidoConViscosidad({ Q: i.Q, G: i.G, dP: P1 - i.P2, Kd: i.Kd, Kw: Kw, Kc: i.Kc, mu: i.mu });
+    const r = areaLiquidoConViscosidad({ Q: i.Q, G: i.G, dP: P1 - i.P2, Kd: i.Kd || 0.65, Kw: Kw, Kc: i.Kc, mu: i.mu });
     const orificio = seleccionarOrificio(r.area);
     return {
       modo: 'liquido',

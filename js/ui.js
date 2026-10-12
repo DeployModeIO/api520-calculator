@@ -6,6 +6,8 @@
 (function () {
   'use strict';
 
+  const root = window;
+
   /* ---------- referencias ---------- */
   const $ = function (id) { return document.getElementById(id); };
 
@@ -212,9 +214,15 @@
     if (!ok) return;
 
     try {
+      // El núcleo API520 trabaja en unidades absolutas:
+      // P2 en psia (psig + 14.7) y T en °R (°F + 459.67).
+      const params = Object.assign({}, entrada, {
+        P2: entrada.pback + 14.7,
+        T: entrada.temp + 459.67,
+      });
       const r = estado.modo === 'gas'
-        ? API520.dimensionarGas(entrada)
-        : API520.dimensionarLiquido(entrada);
+        ? API520.dimensionarGas(params)
+        : API520.dimensionarLiquido(params);
       estado.datosUltimos = r;
       estado.entradaUltima = entrada;
       render(r, entrada);
