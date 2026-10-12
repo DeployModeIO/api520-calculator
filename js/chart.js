@@ -192,7 +192,7 @@
       });
       const tt = tooltip();
       if (hit) {
-        tt.textContent = `W_real @ ${hit.serie.label}: ${Math.round(hit.serie.valor).toLocaleString('en-US')} lb/hr`;
+        tt.textContent = `W_real @ ${hit.serie.label}: ${Math.round(hit.serie.valor).toLocaleString('en-US')} ${hit.serie.unit || 'lb/hr'}`;
         tt.style.display = 'block';
         tt.style.left = ev.clientX + 12 + 'px';
         tt.style.top = ev.clientY - 30 + 'px';

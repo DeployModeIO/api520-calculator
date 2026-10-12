@@ -196,16 +196,19 @@
       const p1Base = entrada.set * 1.10 + 14.7;
       series = [10, 16, 21].map(function (pct) {
         const p1 = entrada.set * (1 + pct / 100) + 14.7;
-        return { label: pct + '%', valor: r.Wreal * (p1 / p1Base), destacado: pct === entrada.sobrepresionPct };
+        return { label: pct + '%', valor: r.Wreal * (p1 / p1Base), destacado: pct === entrada.sobrepresionPct, unit: 'lb/hr' };
       });
     } else {
       const dPBase = r.P1 - (entrada.pback + 14.7);
       series = [10, 16, 21].map(function (pct) {
         const dP = entrada.set * (1 + pct / 100) + 14.7 - (entrada.pback + 14.7);
-        return { label: pct + '%', valor: r.Wreal * Math.sqrt(dP / dPBase), destacado: pct === entrada.sobrepresionPct };
+        return { label: pct + '%', valor: r.Wreal * Math.sqrt(dP / dPBase), destacado: pct === entrada.sobrepresionPct, unit: 'GPM' };
       });
     }
-    ChartsHMI.barras(refs.chart, series, r.modo !== 'liquido' ? entrada.W : entrada.Q);
+    const wReq = r.modo !== 'liquido' ? entrada.W : entrada.Q;
+    const leyReq = $('leyenda-req');
+    if (leyReq) leyReq.textContent = r.modo !== 'liquido' ? t('leyenda_req') : t('leyenda_req_q');
+    ChartsHMI.barras(refs.chart, series, wReq);
 
     const texto = Datasheet.construirTexto(r, entrada, entrada.fluido);
     refs.datasheet.textContent = texto;
