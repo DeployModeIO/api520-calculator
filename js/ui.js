@@ -12,11 +12,12 @@
   const t = function (k) { return root.I18N ? root.I18N.t(k) : k; };
 
   const refs = {
-    modoGas: $('modo-gas'), modoLiq: $('modo-liq'),
-    grupoGas: $('grupo-gas'), grupoLiq: $('grupo-liq'),
+    modoGas: $('modo-gas'), modoVap: $('modo-vap'), modoLiq: $('modo-liq'),
+    grupoW: $('grupo-w'), grupoGas: $('grupo-gas'), grupoVap: $('grupo-vap'), grupoLiq: $('grupo-liq'),
     fluido: $('fluido'),
     set: $('set'), sobrepresion: $('sobrepresion'), pback: $('pback'), temp: $('temp'),
     tipov: $('tipov'), tipoInfo: $('tipo-info'), tipoChip: $('tipo-chip'), kc: $('kc'),
+    dpin: $('dpin'), estvapo: $('estvapo'),
     w: $('w'), m: $('m'), z: $('z'), kk: $('kk'),
     q: $('q'), g: $('g'), mu: $('mu'), kw: $('kw'),
     alerta: $('alerta'),
@@ -45,7 +46,7 @@
     return v === '' ? NaN : Number(v);
   }
 
-  const CAMPOS = ['set', 'pback', 'temp', 'w', 'm', 'z', 'kk', 'q', 'g', 'mu', 'kw'];
+  const CAMPOS = ['set', 'pback', 'temp', 'w', 'm', 'z', 'kk', 'q', 'g', 'mu', 'kw', 'dpin'];
 
   function validarCampo(id, opts) {
     const el = $(id);
@@ -70,6 +71,7 @@
       if (errEl) errEl.textContent = '';
     });
     refs.alerta.hidden = true;
+    refs.alerta.className = 'alerta';
   }
 
   /* ---------- fluidos ---------- */
@@ -111,7 +113,7 @@
   function actualizarTipoV() {
     const tipo = refs.tipov.value;
     refs.tipoInfo.textContent = t('tipo_info_' + tipo);
-    refs.tipoChip.textContent = tipo === 'pilot' ? 'POSRV' : (estado.modo === 'gas' ? 'SRV' : 'RV');
+    refs.tipoChip.textContent = tipo === 'pilot' ? 'POSRV' : (estado.modo === 'liquido' ? 'RV' : 'SRV');
     // Kw: al entrar en modo líquido con fuelle, sugerir valor de curva API
     if (estado.modo === 'liquido' && tipo === 'fuelle') {
       const P1 = num('set') * (1 + Number(refs.sobrepresion.value) / 100) + 14.7;
@@ -133,6 +135,8 @@
       temp: num('temp'),
       tipoValvula: refs.tipov.value,
       Kc: Number(refs.kc.value),
+      dpin: num('dpin'),
+      saturado: refs.estvapo.value === 'saturado',
       W: num('w'), M: num('m'), Z: num('z'), k: num('kk'),
       Q: num('q'), G: num('g'), mu: num('mu'), Kw: num('kw'),
     };
@@ -150,7 +154,7 @@
       refs.estadoSub.textContent = t('estado_sub_critico');
     } else if (r.flujo === 'SUBCRITICO') {
       pillEstado('pill-warn', t('estado_subcritico'));
-      refs.estadoSub.textContent = t('estado_sub_subcritico');
+      refs.estadoSub.textContent = r.modo === 'vapor' ? t('estado_vapor_sub') : t('estado_sub_subcritico');
     } else {
       pillEstado('pill-ok', t('estado_liq'));
       refs.estadoSub.textContent = t('estado_sub_liq');
@@ -170,6 +174,12 @@
       refs.oKb.textContent = fmt(r.Kb, 3) + ' (' + tipoLabel + ')';
       refs.oPcf.textContent = fmt(r.Pcf, 2) + ' psia';
       refs.oExtra.textContent = t('na_gas');
+    } else if (r.modo === 'vapor') {
+      refs.oWreal.textContent = fmt(Math.round(r.Wreal), 0) + ' lb/hr';
+      refs.oC.textContent = t('na_liq');
+      refs.oKb.textContent = fmt(r.Kb, 3) + ' (' + tipoLabel + ')';
+      refs.oPcf.textContent = t('na_liq');
+      refs.oExtra.textContent = 'Ksh ' + fmt(r.Ksh, 3) + (entrada.saturado ? '' : ' · Sobrecalentado');
     } else {
       refs.oWreal.textContent = fmt(Math.round(r.Wreal), 0) + ' GPM';
       refs.oC.textContent = t('na_liq');
@@ -182,7 +192,7 @@
 
     // gráfico: capacidad a 10/16/21 % de sobrepresión
     let series;
-    if (r.modo === 'gas') {
+    if (r.modo !== 'liquido') {
       const p1Base = entrada.set * 1.10 + 14.7;
       series = [10, 16, 21].map(function (pct) {
         const p1 = entrada.set * (1 + pct / 100) + 14.7;
@@ -195,7 +205,7 @@
         return { label: pct + '%', valor: r.Wreal * Math.sqrt(dP / dPBase), destacado: pct === entrada.sobrepresionPct };
       });
     }
-    ChartsHMI.barras(refs.chart, series, r.modo === 'gas' ? entrada.W : entrada.Q);
+    ChartsHMI.barras(refs.chart, series, r.modo !== 'liquido' ? entrada.W : entrada.Q);
 
     const texto = Datasheet.construirTexto(r, entrada, entrada.fluido);
     refs.datasheet.textContent = texto;
@@ -204,6 +214,14 @@
 
   function mostrarError(msg) {
     refs.alerta.textContent = msg;
+    refs.alerta.className = 'alerta';
+    refs.alerta.hidden = false;
+  }
+
+  function mostrarAvisos(lista) {
+    if (!lista.length) return;
+    refs.alerta.textContent = lista.join(' ');
+    refs.alerta.className = 'alerta alerta-warn';
     refs.alerta.hidden = false;
   }
 
@@ -216,11 +234,14 @@
     ok = validarCampo('set', { min: 0.1 }) && ok;
     ok = validarCampo('pback', { min: 0 }) && ok;
     ok = validarCampo('temp', { min: -459 }) && ok;
+    ok = validarCampo('dpin', { min: 0 }) && ok;
     if (estado.modo === 'gas') {
       ok = validarCampo('w', { min: 0.1 }) && ok;
       ok = validarCampo('m', { min: 0.1 }) && ok;
       ok = validarCampo('z', { min: 0.01 }) && ok;
       ok = validarCampo('kk', { min: 1.01 }) && ok;
+    } else if (estado.modo === 'vapor') {
+      ok = validarCampo('w', { min: 0.1 }) && ok;
     } else {
       ok = validarCampo('q', { min: 0.1 }) && ok;
       ok = validarCampo('g', { min: 0.01 }) && ok;
@@ -230,18 +251,31 @@
     if (!ok) return;
 
     try {
-      // El núcleo API520 trabaja en unidades absolutas:
-      // P2 en psia (psig + 14.7) y T en °R (°F + 459.67).
+      // El núcleo API520 trabaja en unidades absolutas: P2 en psia (psig + 14.7);
+      // gas usa T en °R; vapor usa T en °F para Ksh (definido en api520.js).
       const params = Object.assign({}, entrada, {
         P2: entrada.pback + 14.7,
-        T: entrada.temp + 459.67,
+        T: estado.modo === 'vapor' ? entrada.temp : entrada.temp + 459.67,
       });
-      const r = estado.modo === 'gas'
-        ? API520.dimensionarGas(params)
-        : API520.dimensionarLiquido(params);
+      let r;
+      if (estado.modo === 'gas') r = API520.dimensionarGas(params);
+      else if (estado.modo === 'vapor') r = API520.dimensionarVapor(params);
+      else r = API520.dimensionarLiquido(params);
       estado.datosUltimos = r;
       estado.entradaUltima = entrada;
       render(r, entrada);
+
+      // --- Validaciones de cumplimiento API 520/521 ---
+      const avisos = [];
+      const lim3 = 0.03 * entrada.set; // regla del 3 % sobre la presión de ajuste
+      if (isFinite(entrada.dpin) && entrada.dpin > lim3) {
+        avisos.push(t('warn_3pct') + lim3.toFixed(2) + ' psig.');
+      }
+      // Fuelle balanceada: limitada a contrapresión ≤ 50 % del ajuste
+      if (entrada.tipoValvula === 'fuelle' && entrada.pback > 0.5 * entrada.set) {
+        avisos.push(t('warn_fuelle50'));
+      }
+      mostrarAvisos(avisos);
     } catch (e) {
       const msg = e.message || 'Error';
       if (/^Z /.test(msg)) { $('err-z').textContent = t('errZ'); }
@@ -273,18 +307,23 @@
   /* ---------- modo gas/líquido ---------- */
   function setModo(modo) {
     estado.modo = modo;
-    const gas = modo === 'gas';
+    const gas = modo === 'gas', vap = modo === 'vapor';
     refs.modoGas.classList.toggle('active', gas);
-    refs.modoLiq.classList.toggle('active', !gas);
+    refs.modoVap.classList.toggle('active', vap);
+    refs.modoLiq.classList.toggle('active', !gas && !vap);
     refs.modoGas.setAttribute('aria-selected', String(gas));
-    refs.modoLiq.setAttribute('aria-selected', String(!gas));
+    refs.modoVap.setAttribute('aria-selected', String(vap));
+    refs.modoLiq.setAttribute('aria-selected', String(!gas && !vap));
+    refs.grupoW.hidden = !(gas || vap);   // W solo en modos másicos
     refs.grupoGas.hidden = !gas;
-    refs.grupoLiq.hidden = gas;
-    if (!gas) aplicarFluido(); // reaplica propiedades del fluido (G, μ)
+    refs.grupoVap.hidden = !vap;
+    refs.grupoLiq.hidden = gas || vap;
+    if (modo === 'liquido') aplicarFluido(); // reaplica propiedades del fluido (G, μ)
     actualizarTipoV();
     recalcular();
   }
   refs.modoGas.addEventListener('click', function () { setModo('gas'); });
+  refs.modoVap.addEventListener('click', function () { setModo('vapor'); });
   refs.modoLiq.addEventListener('click', function () { setModo('liquido'); });
 
   /* ---------- idioma ---------- */
@@ -326,7 +365,7 @@
     if (el) el.addEventListener('input', recalcular);
   });
   refs.tipov.addEventListener('change', function () { actualizarTipoV(); recalcular(); });
-  ['sobrepresion', 'kc'].forEach(function (id) {
+  ['sobrepresion', 'kc', 'estvapo'].forEach(function (id) {
     $(id).addEventListener('change', recalcular);
   });
 

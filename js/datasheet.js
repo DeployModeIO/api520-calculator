@@ -35,7 +35,7 @@
     L.push(linea('='));
     L.push(campo(ds('ds_fecha'), fecha()));
     L.push(campo(ds('ds_fluido'), nombreFluido));
-    L.push(campo(ds('ds_modo'), r.modo === 'gas' ? ds('ds_modo_gas') : ds('ds_modo_liq')));
+    L.push(campo(ds('ds_modo'), r.modo === 'gas' ? ds('ds_modo_gas') : r.modo === 'vapor' ? ds('ds_modo_vapor') : ds('ds_modo_liq')));
     L.push(campo(ds('ds_regimen'), regimen));
     L.push(campo(ds('ds_tipo'), ds('opt_' + entrada.tipoValvula)));
     L.push(linea('-'));
@@ -47,6 +47,8 @@
     if (r.modo === 'gas') {
       L.push(campo(ds('ds_pcf'), r.Pcf.toFixed(2) + ' psia'));
       L.push(campo(ds('ds_temp'), (entrada.temp + 459.67).toFixed(2) + ' R (' + entrada.temp + ' F)'));
+    } else if (r.modo === 'vapor') {
+      L.push(campo(ds('ds_temp'), entrada.temp.toFixed(0) + ' F (' + (entrada.temp + 459.67).toFixed(2) + ' R)'));
     }
     L.push(linea('-'));
     L.push(' ' + ds('ds_prop'));
@@ -56,6 +58,9 @@
       L.push(campo(ds('ds_z'), entrada.Z.toFixed(2)));
       L.push(campo(ds('ds_c'), r.C.toFixed(2)));
       L.push(campo(ds('ds_kb'), r.Kb.toFixed(3)));
+    } else if (r.modo === 'vapor') {
+      L.push(campo(ds('ds_ksh'), r.Ksh.toFixed(3) + (entrada.saturado ? ' (saturado)' : ' (' + entrada.temp + ' F)')));
+      L.push(campo(ds('ds_kb'), r.Kb.toFixed(3)));
     } else {
       L.push(campo(ds('ds_g'), entrada.G.toFixed(2)));
       L.push(campo(ds('ds_mu'), entrada.mu.toFixed(2) + ' cP'));
@@ -63,7 +68,7 @@
       L.push(campo(ds('ds_re'), Math.round(r.Re).toLocaleString('en-US')));
       L.push(campo(ds('ds_kw'), r.Kw.toFixed(3)));
     }
-    L.push(campo(ds('ds_kd'), (r.modo === 'gas' ? 0.975 : 0.65).toFixed(3)));
+    L.push(campo(ds('ds_kd'), (r.modo === 'liquido' ? 0.65 : 0.975).toFixed(3)));
     L.push(campo(ds('ds_kc'), entrada.Kc.toFixed(1)));
     L.push(linea('-'));
     L.push(' ' + ds('ds_res'));
@@ -71,7 +76,7 @@
     L.push(campo(ds('ds_orificio'), r.orificio.letra + ' — ' + r.orificio.area.toFixed(3) + ' in2'));
     L.push(campo(ds('ds_uso'), r.usoPct.toFixed(1) + ' %'));
     L.push(campo(ds('ds_margen'), '+' + r.margenPct.toFixed(1) + ' %'));
-    if (r.modo === 'gas') {
+    if (r.modo !== 'liquido') {
       L.push(campo(ds('ds_wreal'), Math.round(r.Wreal).toLocaleString('en-US') + ' lb/hr'));
       L.push(campo(ds('ds_wreq'), Math.round(entrada.W).toLocaleString('en-US') + ' lb/hr'));
     } else {

@@ -181,6 +181,42 @@ t('Correcciones de fluidos: etano G=0.544, Jet A1 M=170 μ=1.4, diésel G=0.84',
   assert.equal(diesel.GLiquido, 0.84, 'Diésel G (EN590 0.820–0.845)');
 });
 
+// ---- Modo vapor (ASME / API 520 Secc. 5.6) ----
+
+t('Vapor saturado: A = W/(51.5·Kd·P1·Ksh·Kb·Kc) con Ksh=1.0', () => {
+  // W=10000, set=500, sobrep=2 % → P1=524.7 psia; Kd=0.975
+  // A = 10000/(51.5·0.975·524.7) = 0.37956 → G (0.503)
+  const r = A.dimensionarVapor({ W: 10000, set: 500, sobrepresionPct: 2, P2: 14.7, T: 469, saturado: true, Kc: 1, tipoValvula: 'convencional' });
+  assert.ok(Math.abs(r.areaRequerida - 0.37956) / 0.37956 <= 0.01, 'A=' + r.areaRequerida);
+  assert.equal(r.orificio.letra, 'G');
+  assert.equal(r.Ksh, 1.0);
+  assert.equal(r.flujo, 'CRITICO');
+});
+
+t('Ksh: saturado=1.0; curva 400°F=1.0 → 1000°F=0.80 (monótona decreciente)', () => {
+  assert.equal(A.factorKsh(500, true), 1.0);
+  assert.equal(A.factorKsh(400, false), 1.0);
+  assert.ok(Math.abs(A.factorKsh(1000, false) - 0.80) < 0.005);
+  assert.ok(Math.abs(A.factorKsh(700, false) - 0.90) / 0.90 <= 0.02, 'Ksh(700)=' + A.factorKsh(700, false));
+  assert.ok(A.factorKsh(900, false) < A.factorKsh(600, false), 'debe ser decreciente con T');
+});
+
+t('Vapor sobrecalentado 800 °F exige más área que saturado (Ksh 0.86)', () => {
+  const sat = A.dimensionarVapor({ W: 10000, set: 500, sobrepresionPct: 2, P2: 14.7, T: 469, saturado: true, Kc: 1, tipoValvula: 'convencional' });
+  const sob = A.dimensionarVapor({ W: 10000, set: 500, sobrepresionPct: 2, T: 800, saturado: false, P2: 14.7, Kc: 1, tipoValvula: 'convencional' });
+  assert.ok(Math.abs(sob.Ksh - 0.86) / 0.86 <= 0.02, 'Ksh=' + sob.Ksh);
+  assert.ok(sob.areaRequerida > sat.areaRequerida);
+});
+
+t('Vapor subcrítico: P2 > 0.75·P1 se marca SUBCRITICO y avisa', () => {
+  const r = A.dimensionarVapor({ W: 10000, set: 500, sobrepresionPct: 2, T: 469, saturado: true, P2: 0.80 * 524.7, Kc: 1, tipoValvula: 'convencional' });
+  assert.equal(r.flujo, 'SUBCRITICO');
+});
+
+t('Vapor: P2 ≥ P1 lanza error "P1"', () => {
+  assert.throws(() => A.dimensionarVapor({ W: 1000, set: 100, sobrepresionPct: 10, P2: 200, T: 400, saturado: true, Kc: 1, tipoValvula: 'convencional' }), /P1/);
+});
+
 // ---- Ejecución ----
 let ok = 0;
 let fail = 0;

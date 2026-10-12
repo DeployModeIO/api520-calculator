@@ -66,6 +66,10 @@ Tokens en `:root` (`css/styles.css`): fondo `#f5f6f8`, tarjetas `#ffffff`, navy 
 
 Herramienta de apoyo. Los factores de curva (Kb de fuelle, Kw de fuelle, Kv de viscosidad) son **aproximaciones documentadas de las curvas API 520 Parte I** y son editables. Validar siempre contra las ediciones vigentes de API STD 520 / 526 y los datos del fabricante de la válvula.
 
+## Licencia
+
+MIT — ver [LICENSE](LICENSE). Publicable gratuitamente. Cambios de ingeniería trazables en [CHANGELOG.md](CHANGELOG.md).
+
 ## Fuentes de referencia (verificación 2026-10-12)
 
 Fórmulas, constantes, tabla API 526, factores de corrección y propiedades de fluidos verificados contra:

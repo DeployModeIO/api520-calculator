@@ -170,7 +170,7 @@ body {
 /* ---------- controles ---------- */
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   background: var(--primary-soft);
   border-radius: 8px;
@@ -254,6 +254,11 @@ input.invalid { border-color: var(--err); background: var(--err-soft); }
   color: var(--err-txt);
   font-size: 0.85rem;
   font-weight: 600;
+}
+.alerta-warn {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn-txt);
 }
 
 /* ---------- resultados ---------- */

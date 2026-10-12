@@ -54,6 +54,7 @@
 
       <div class="segmented" role="tablist" aria-label="Modo de cálculo">
         <button type="button" id="modo-gas" class="seg-btn active" role="tab" aria-selected="true" data-i18n="modo_gas">Gas / Vapor</button>
+        <button type="button" id="modo-vap" class="seg-btn" role="tab" aria-selected="false" data-i18n="modo_vapor">Vapor (ASME)</button>
         <button type="button" id="modo-liq" class="seg-btn" role="tab" aria-selected="false" data-i18n="modo_liq">Líquido</button>
       </div>
 
@@ -102,16 +103,25 @@
             <option value="0.9" data-i18n="opt_kc09">0.9 — con ruptura</option>
           </select>
         </div>
+        <div class="field">
+          <label for="dpin" data-i18n="lbl_dpin">ΔP de entrada (psig, opcional)</label>
+          <input type="number" id="dpin" value="0" min="0" step="0.1" inputmode="decimal">
+          <span class="field-error" id="err-dpin" role="alert"></span>
+        </div>
+      </div>
+
+      <!-- Caudal másico W: compartido por gas y vapor -->
+      <div id="grupo-w">
+        <div class="field">
+          <label for="w" data-i18n="lbl_w">Caudal requerido W (lb/hr)</label>
+          <input type="number" id="w" value="5000" min="0" step="100" inputmode="decimal">
+          <span class="field-error" id="err-w" role="alert"></span>
+        </div>
       </div>
 
       <!-- Campos exclusivos gas/vapor -->
       <div id="grupo-gas">
         <div class="grid-2">
-          <div class="field">
-            <label for="w" data-i18n="lbl_w">Caudal requerido W (lb/hr)</label>
-            <input type="number" id="w" value="5000" min="0" step="100" inputmode="decimal">
-            <span class="field-error" id="err-w" role="alert"></span>
-          </div>
           <div class="field">
             <label for="m" data-i18n="lbl_m">Peso molecular M (lb/lbmol)</label>
             <input type="number" id="m" value="18.5" min="0" step="0.01" inputmode="decimal">
@@ -129,6 +139,18 @@
           </div>
         </div>
         <p class="note" data-i18n="nota_kd_gas">Kd gas/vapor = 0.975 (API 520). Cambiar M, k o Z actualiza el fluido a "Personalizado".</p>
+      </div>
+
+      <!-- Campos exclusivos vapor (ASME) -->
+      <div id="grupo-vap" hidden>
+        <div class="field">
+          <label for="estvapo" data-i18n="lbl_estado_vapor">Estado del vapor</label>
+          <select id="estvapo">
+            <option value="saturado" selected data-i18n="opt_saturado">Saturado (Ksh = 1.0)</option>
+            <option value="sobrecalentado" data-i18n="opt_sobrecalentado">Sobrecalentado (Ksh por temperatura)</option>
+          </select>
+        </div>
+        <p class="note" data-i18n="nota_vapor">Kd vapor = 0.975 · constante 51.5 (API 520 Secc. 5.6). La temperatura de alivio (°F) define Ksh. Crítico si P2 ≤ 0.75·P1.</p>
       </div>
 
       <!-- Campos exclusivos líquido -->

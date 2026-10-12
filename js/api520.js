@@ -146,6 +146,50 @@
     return { area: A, Kv: Kv, Re: Re, orificio: orificio };
   }
 
+  // Ksh — factor de corrección por sobrecalentamiento del vapor (API 520
+  // Parte I, Secc. 5.6). Aproximación lineal de la curva publicada (puntos de
+  // lecturas secundarias del diagrama Ksh — editable). Saturado: Ksh = 1.0.
+  const KSH_CURVA = [[400, 1.0], [500, 0.97], [600, 0.93], [700, 0.90], [800, 0.86], [900, 0.83], [1000, 0.80]];
+  function factorKsh(tempF, saturado) {
+    if (saturado) return 1.0;
+    const T = assertNum(tempF, 'T');
+    if (T <= 400) return 1.0;
+    if (T >= 1000) return 0.80;
+    for (let i = 1; i < KSH_CURVA.length; i++) {
+      const x0 = KSH_CURVA[i - 1][0], y0 = KSH_CURVA[i - 1][1];
+      const x1 = KSH_CURVA[i][0], y1 = KSH_CURVA[i][1];
+      if (T <= x1) return y0 + ((y1 - y0) * (T - x0)) / (x1 - x0);
+    }
+    return 0.80;
+  }
+
+  // Vapor (ASME / API 520 Secc. 5.6): A = W / (51.5 · Kd · P1 · Ksh · Kb · Kc)
+  // Flujo crítico del vapor: la aproximación estándar es P2 ≤ 0.75·P1 (absolutas);
+  // por encima, consultar al fabricante (se marca SUBCRITICO como aviso).
+  function dimensionarVapor(i) {
+    const W = assertNum(i.W, 'W');
+    if (W <= 0) throw new Error('W debe ser > 0 (caudal de vapor)');
+    const P1 = i.set + i.set * (i.sobrepresionPct / 100) + 14.7;
+    if (i.P2 >= P1) throw new Error('P1 debe ser > P2 (la contrapresión supera la presión de alivio)');
+    const critico = i.P2 <= 0.75 * P1;
+    const Kd = i.Kd || 0.975;
+    const Ksh = factorKsh(i.T, i.saturado !== false);
+    const pctBP = (i.P2 / P1) * 100;
+    const Kb = factorKb(critico ? (i.contrapresionPct || 0) : pctBP, i.tipoValvula, i.sobrepresionPct);
+    const Kc = i.Kc || 1.0;
+    const denom = 51.5 * Kd * P1 * Ksh * Kb * Kc;
+    const A = W / denom;
+    const orificio = seleccionarOrificio(A);
+    const Wreal = denom * orificio.area;
+    return {
+      modo: 'vapor', P1: P1, flujo: critico ? 'CRITICO' : 'SUBCRITICO',
+      Ksh: Ksh, Kb: Kb, Kd: Kd,
+      areaRequerida: A, orificio: orificio, Wreal: Wreal,
+      usoPct: (A / orificio.area) * 100, margenPct: orificio.margenPct,
+      unidades: { W: 'lb/hr', P: 'psia', T: 'F', A: 'in2' },
+    };
+  }
+
   /* ---------- selección de orificio API 526 ---------- */
   function seleccionarOrificio(areaRequerida) {
     assertNum(areaRequerida, 'areaRequerida');
@@ -225,6 +269,8 @@
     presionCriticaFlujo: presionCriticaFlujo,
     factorKb: factorKb,
     factorKw: factorKw,
+    factorKsh: factorKsh,
+    dimensionarVapor: dimensionarVapor,
     areaRequeridaGas: areaRequeridaGas,
     capacidadRealGas: capacidadRealGas,
     areaRequeridaLiquido: areaRequeridaLiquido,
