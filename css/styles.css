@@ -1,0 +1,290 @@
+﻿/* ============================================================
+   styles.css â€” DiseÃ±o HMI Industrial Light Mode
+   Bento Grid plano Â· tokens Ãºnicos en :root Â· estilo plano sin degradados
+   ============================================================ */
+
+:root {
+  --bg: #f5f6f8;          /* fondo general gris muy claro */
+  --card: #ffffff;        /* tarjetas soft-white */
+  --border: #e2e8f0;      /* bordes suaves */
+  --primary: #16385e;     /* navy profundo â€” visualizaciones */
+  --primary-soft: #e8eef5;/* tinte navy para fondos suaves */
+  --txt: #0f2a4a;         /* texto principal azul oscuro */
+  --txt2: #47586b;        /* texto secundario */
+  --ok: #10b981;          /* esmeralda â€” operativo (rellenos) */
+  --ok-txt: #047857;      /* esmeralda legible para texto */
+  --ok-soft: #e7f6ef;
+  --err: #ea580c;         /* naranja de seguridad â€” crÃ­tico (rellenos) */
+  --err-txt: #c2410c;     /* naranja legible para texto */
+  --err-soft: #fdeee3;
+  --warn: #d97706;
+  --warn-txt: #b45309;
+  --warn-soft: #fdf3e3;
+  --info: #0369a1;
+  --info-soft: #e6f2f9;
+  --mono: ui-monospace, Consolas, "Cascadia Mono", monospace;
+  --sans: system-ui, "Segoe UI", Inter, Roboto, sans-serif;
+  --on-primary: #ffffff;      /* texto sobre navy */
+  --primary-hover: #1d4a7a;   /* navy al pasar el cursor */
+  --print-bg: #ffffff;
+  --print-txt: #000000;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: 16px; }
+
+body {
+  font-family: var(--sans);
+  line-height: 1.5;
+  color: var(--txt);
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* ---------- barra superior ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--card);
+  border-bottom: 2px solid var(--primary);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon { color: var(--primary); display: grid; place-items: center; }
+.brand h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.2px; }
+.subtitle { font-size: 0.8rem; color: var(--txt2); }
+.topbar-status { flex-shrink: 0; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  min-height: 32px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.6px;
+}
+.pill-ok { background: var(--ok-soft); color: var(--ok-txt); border: 1px solid var(--ok); }
+.pill-err { background: var(--err-soft); color: var(--err-txt); border: 1px solid var(--err); }
+.pill-warn { background: var(--warn-soft); color: var(--warn-txt); border: 1px solid var(--warn); }
+
+/* ---------- bento grid ---------- */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+  padding: 20px 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.span-4 { grid-column: span 4; }
+.span-12 { grid-column: span 12; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(15, 42, 74, 0.06);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- controles ---------- */
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  background: var(--primary-soft);
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.seg-btn {
+  min-height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--txt2);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.seg-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 1px 2px rgba(15, 42, 74, 0.12); }
+
+.field { margin-bottom: 10px; }
+.field label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--txt2);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+input, select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--txt);
+  font-family: var(--mono);
+  font-size: 0.95rem;
+}
+input:focus-visible, select:focus-visible, button:focus-visible, pre:focus-visible, a:focus-visible {
+  outline: 2px solid var(--info);
+  outline-offset: 2px;
+}
+input.invalid { border-color: var(--err); background: var(--err-soft); }
+.field-error { display: block; min-height: 18px; font-size: 0.74rem; color: var(--err-txt); font-weight: 600; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+
+.note { font-size: 0.74rem; color: var(--txt2); margin-top: 8px; }
+
+.alerta {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--err);
+  border-radius: 8px;
+  background: var(--err-soft);
+  color: var(--err-txt);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ---------- resultados ---------- */
+.resultado-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+#donut { width: 130px; height: 130px; flex-shrink: 0; }
+.estado-sub { font-size: 0.76rem; color: var(--txt2); margin-top: 6px; }
+
+.kv { display: block; }
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 2px;
+  border-bottom: 1px dashed var(--border);
+}
+.kv-row:last-child { border-bottom: none; }
+.kv dt { font-size: 0.8rem; color: var(--txt2); }
+.kv dd { font-size: 0.92rem; text-align: right; }
+.kv-destacado { background: var(--primary-soft); margin: 0 -8px; padding: 8px; border-radius: 8px; border-bottom: none; }
+.kv-destacado dd { color: var(--primary); }
+.kv-destacado-ok { background: var(--ok-soft); margin: 0 -8px; padding: 8px; border-radius: 8px; border-bottom: none; }
+.kv-destacado-ok dd { color: var(--ok-txt); }
+.grande { font-size: 1.5rem !important; font-weight: 800; color: var(--primary); }
+
+.mono { font-family: var(--mono); }
+
+/* ---------- grÃ¡fico ---------- */
+#chart { width: 100%; height: auto; display: block; }
+.leyenda { display: flex; gap: 16px; margin-top: 10px; }
+.leyenda-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--txt2); }
+.swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.swatch-navy { background: var(--primary); }
+.swatch-ok { background: var(--ok); border: 1px solid var(--ok-txt); }
+
+.chart-tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--txt);
+  color: var(--on-primary);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 6px 9px;
+  border-radius: 6px;
+  z-index: 50;
+  display: none;
+}
+
+/* ---------- datasheet ---------- */
+.datasheet-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn:hover { background: var(--primary-hover); }
+.btn-ghost { background: var(--card); color: var(--primary); }
+.btn-ghost:hover { background: var(--primary-soft); }
+
+.datasheet {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--txt);
+}
+
+/* ---------- pie ---------- */
+.pie {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 8px 24px 24px;
+  font-size: 0.74rem;
+  color: var(--txt2);
+}
+
+/* ---------- Ã¡rea de impresiÃ³n (solo visible al imprimir) ---------- */
+#print-area { display: none; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  .span-4 { grid-column: span 6; }
+  .span-12 { grid-column: span 12; }
+}
+@media (max-width: 720px) {
+  .bento { padding: 12px; gap: 10px; }
+  .span-4, .span-12 { grid-column: span 12; }
+  .topbar { padding: 12px 14px; flex-direction: column; align-items: flex-start; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .resultado-top { flex-direction: column; }
+}
+
+/* ---------- impresiÃ³n: solo la hoja de especificaciÃ³n ---------- */
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: var(--print-bg);
+    color: var(--print-txt);
+    font-size: 11pt;
+    padding: 16mm;
+    white-space: pre-wrap;
+  }
+}

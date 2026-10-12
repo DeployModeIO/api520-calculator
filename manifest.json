@@ -1,0 +1,19 @@
+{
+  "name": "Calculadora de Válvulas de Alivio — API 520",
+  "short_name": "API 520 PSV",
+  "description": "Dimensionamiento de PSV según API STD 520 Parte I y API 526. Panel HMI industrial, funciona offline.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#16385e",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

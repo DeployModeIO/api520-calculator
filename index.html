@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#16385e">
+  <meta name="description" content="Calculadora de capacidad y área de orificio de válvulas de alivio (PSV) según API STD 520 Parte I y API 526. Panel de control HMI industrial.">
+  <title>Calculadora de Válvulas de Alivio — API 520 Parte I</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ============ BARRA SUPERIOR ============ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M5 7h14M7 7l-3 8h16l-3-8M9 15v3m6-3v3M7 21h10"/></svg>
+      </span>
+      <div>
+        <h1>Calculadora de Válvulas de Alivio</h1>
+        <p class="subtitle">Dimensionamiento PSV · API STD 520 Parte I · API 526 · Panel de control</p>
+      </div>
+    </div>
+    <div class="topbar-status">
+      <span class="pill pill-ok" id="estado-sistema">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg>
+        OPERATIVO
+      </span>
+    </div>
+  </header>
+
+  <main class="bento" id="app">
+
+    <!-- ============ TARJETA: PARÁMETROS DE ENTRADA ============ -->
+    <section class="card span-4" aria-labelledby="h-entrada">
+      <h2 id="h-entrada" class="card-title">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+        Parámetros de entrada
+      </h2>
+
+      <div class="segmented" role="tablist" aria-label="Modo de cálculo">
+        <button type="button" id="modo-gas" class="seg-btn active" role="tab" aria-selected="true">Gas / Vapor</button>
+        <button type="button" id="modo-liq" class="seg-btn" role="tab" aria-selected="false">Líquido</button>
+      </div>
+
+      <div class="field">
+        <label for="fluido">Fluido</label>
+        <select id="fluido"></select>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="set">Presión de ajuste (psig)</label>
+          <input type="number" id="set" value="100" min="0" step="1" inputmode="decimal">
+          <span class="field-error" id="err-set" role="alert"></span>
+        </div>
+        <div class="field">
+          <label for="sobrepresion">Sobrepresión</label>
+          <select id="sobrepresion">
+            <option value="10" selected>10 %</option>
+            <option value="16">16 %</option>
+            <option value="21">21 %</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pback">Contrapresión P2 (psig)</label>
+          <input type="number" id="pback" value="0" min="0" step="0.1" inputmode="decimal">
+          <span class="field-error" id="err-pback" role="alert"></span>
+        </div>
+        <div class="field">
+          <label for="temp">Temperatura de alivio (°F)</label>
+          <input type="number" id="temp" value="100" step="1" inputmode="decimal">
+          <span class="field-error" id="err-temp" role="alert"></span>
+        </div>
+        <div class="field">
+          <label for="tipov">Tipo de válvula</label>
+          <select id="tipov">
+            <option value="convencional" selected>Convencional</option>
+            <option value="fuelle">Fuelle balanceada</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="kc">Kc (disco de ruptura)</label>
+          <select id="kc">
+            <option value="1.0" selected>1.0 — sin ruptura</option>
+            <option value="0.9">0.9 — con ruptura</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Campos exclusivos gas/vapor -->
+      <div id="grupo-gas">
+        <div class="grid-2">
+          <div class="field">
+            <label for="w">Caudal requerido W (lb/hr)</label>
+            <input type="number" id="w" value="5000" min="0" step="100" inputmode="decimal">
+            <span class="field-error" id="err-w" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="m">Peso molecular M (lb/lbmol)</label>
+            <input type="number" id="m" value="18.5" min="0" step="0.01" inputmode="decimal">
+            <span class="field-error" id="err-m" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="z">Factor de compresibilidad Z</label>
+            <input type="number" id="z" value="1.0" min="0" step="0.01" inputmode="decimal">
+            <span class="field-error" id="err-z" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="kk">Relación de calores específicos k</label>
+            <input type="number" id="kk" value="1.25" min="0" step="0.01" inputmode="decimal">
+            <span class="field-error" id="err-kk" role="alert"></span>
+          </div>
+        </div>
+        <p class="note">Kd gas/vapor = 0.975 (API 520). Cambiar M, k o Z actualiza el fluido a "Personalizado".</p>
+      </div>
+
+      <!-- Campos exclusivos líquido -->
+      <div id="grupo-liq" hidden>
+        <div class="grid-2">
+          <div class="field">
+            <label for="q">Caudal volumétrico Q (GPM)</label>
+            <input type="number" id="q" value="500" min="0" step="10" inputmode="decimal">
+            <span class="field-error" id="err-q" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="g">Gravedad específica G</label>
+            <input type="number" id="g" value="0.75" min="0" step="0.01" inputmode="decimal">
+            <span class="field-error" id="err-g" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="mu">Viscosidad dinámica μ (cP)</label>
+            <input type="number" id="mu" value="0.3" min="0" step="0.01" inputmode="decimal">
+            <span class="field-error" id="err-mu" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="kw">Kw (corrección contrapresión)</label>
+            <input type="number" id="kw" value="1.0" min="0" step="0.01" inputmode="decimal">
+            <span class="field-error" id="err-kw" role="alert"></span>
+          </div>
+        </div>
+        <p class="note">Kd líquido = 0.65 (API 520). Kv por viscosidad: iterativo con correlación API (aproximación).</p>
+      </div>
+
+      <div class="alerta" id="alerta" role="alert" hidden></div>
+    </section>
+
+    <!-- ============ TARJETA: RESULTADOS ============ -->
+    <section class="card span-4" aria-labelledby="h-resultado">
+      <h2 id="h-resultado" class="card-title">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 8h.01M12 12v5"/><circle cx="12" cy="12" r="10"/></svg>
+        Resultado del dimensionamiento
+      </h2>
+
+      <div class="resultado-top">
+        <canvas id="donut" width="220" height="220" role="img" aria-label="Porcentaje de uso del orificio seleccionado"></canvas>
+        <div class="estado-wrap">
+          <span class="pill pill-ok" id="estado">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg>
+            <span id="estado-txt">FLUJO CRÍTICO</span>
+          </span>
+          <p class="estado-sub" id="estado-sub">Dimensionamiento API 520 Parte I</p>
+        </div>
+      </div>
+
+      <dl class="kv" id="resultados">
+        <div class="kv-row kv-destacado">
+          <dt>Orificio API 526</dt>
+          <dd class="mono grande" id="o-orificio">—</dd>
+        </div>
+        <div class="kv-row">
+          <dt>Área del orificio</dt>
+          <dd class="mono" id="o-area-orif">—</dd>
+        </div>
+        <div class="kv-row">
+          <dt>Área requerida</dt>
+          <dd class="mono" id="o-area">—</dd>
+        </div>
+        <div class="kv-row">
+          <dt>Uso del orificio</dt>
+          <dd class="mono" id="o-uso">—</dd>
+        </div>
+        <div class="kv-row">
+          <dt>Margen de capacidad</dt>
+          <dd class="mono" id="o-margen">—</dd>
+        </div>
+        <div class="kv-row kv-destacado-ok">
+          <dt>Capacidad real certificada</dt>
+          <dd class="mono" id="o-wreal">—</dd>
+        </div>
+        <div class="kv-row">
+          <dt>C — expansión isentrópica</dt>
+          <dd class="mono" id="o-c">—</dd>
+        </div>
+        <div class="kv-row">
+          <dt>Kb — contrapresión</dt>
+          <dd class="mono" id="o-kb">—</dd>
+        </div>
+        <div class="kv-row">
+          <dt>Pcf — presión crítica</dt>
+          <dd class="mono" id="o-pcf">—</dd>
+        </div>
+        <div class="kv-row">
+          <dt>Kv / Reynolds (líquido)</dt>
+          <dd class="mono" id="o-extra">—</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- ============ TARJETA: GRÁFICO DE CAPACIDAD ============ -->
+    <section class="card span-4" aria-labelledby="h-grafico">
+      <h2 id="h-grafico" class="card-title">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18h18M8 17V9m5 8V5m5 12v-6"/></svg>
+        Capacidad vs. sobrepresión
+      </h2>
+      <p class="note">Capacidad certificada del orificio seleccionado a 10 / 16 / 21 % de sobrepresión.</p>
+      <canvas id="chart" width="640" height="360" role="img" aria-label="Gráfico de barras: capacidad certificada a distintas sobrepresiones"></canvas>
+      <div class="leyenda" aria-hidden="true">
+        <span class="leyenda-item"><span class="swatch swatch-navy"></span> Capacidad W<sub>real</sub></span>
+        <span class="leyenda-item"><span class="swatch swatch-ok"></span> Caudal requerido W</span>
+      </div>
+    </section>
+
+    <!-- ============ TARJETA: HOJA DE ESPECIFICACIÓN ============ -->
+    <section class="card span-12" aria-labelledby="h-datasheet">
+      <h2 id="h-datasheet" class="card-title">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        Hoja de especificación de datos de proceso (API 520 / ISA S20)
+      </h2>
+      <div class="datasheet-actions">
+        <button type="button" id="btn-copy" class="btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copiar
+        </button>
+        <button type="button" id="btn-pdf" class="btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Exportar PDF
+        </button>
+        <button type="button" id="btn-print" class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+          Imprimir
+        </button>
+        <span class="note" id="aviso-export" role="status"></span>
+      </div>
+      <pre class="datasheet mono" id="datasheet" tabindex="0" aria-label="Hoja de especificación generada"></pre>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <p>Herramienta de apoyo a ingeniería — validar resultados contra API STD 520 Parte I / API 526. Funciona 100% offline. Los factores de curva (Kb, Kv) son aproximaciones documentadas y editables.</p>
+  </footer>
+
+  <pre id="print-area" class="mono" aria-hidden="true"></pre>
+
+  <script src="js/fluids.js"></script>
+  <script src="js/orifices.js"></script>
+  <script src="js/api520.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/datasheet.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
