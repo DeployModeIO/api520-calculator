@@ -42,15 +42,32 @@
   }
 
   // Factor de corrección por contrapresión Kb.
-  // Convencional en flujo crítico: 1.0. Fuelle: interpolación lineal de
-  // curvas API 520 Parte I (APROXIMACIÓN editable, % de contrapresión).
+  // Convencional en flujo crítico: 1.0. Fuelle balanceado: interpolación lineal
+  // de curvas API 520 Parte I (APROXIMACIÓN editable, % de contrapresión).
+  // Pilotada (POSRV): 1.0 — la presión de ajuste no es afectada por la
+  // contrapresión acumulada (verificar límites del fabricante).
   const KB_FUELLE = [[0, 1.0], [10, 0.99], [20, 0.97], [30, 0.95], [40, 0.91], [50, 0.86]];
   function factorKb(pctContrapresion, tipoValvula) {
+    if (tipoValvula === 'pilot') return 1.0;
     if (tipoValvula !== 'fuelle') return 1.0;
     const pct = Math.min(50, Math.max(0, pctContrapresion || 0));
     for (let i = 1; i < KB_FUELLE.length; i++) {
       const x0 = KB_FUELLE[i - 1][0], y0 = KB_FUELLE[i - 1][1];
       const x1 = KB_FUELLE[i][0], y1 = KB_FUELLE[i][1];
+      if (pct <= x1) return y0 + ((y1 - y0) * (pct - x0)) / (x1 - x0);
+    }
+    return 0.86;
+  }
+
+  // Kw — corrección por contrapresión en servicio LÍQUIDO (API 520 Parte I,
+  // APROXIMACIÓN de curva para fuelle balanceado). Convencional/pilotada: 1.0.
+  const KW_FUELLE = [[0, 1.0], [10, 0.95], [20, 0.91], [30, 0.88], [40, 0.86], [50, 0.86]];
+  function factorKw(pctContrapresion, tipoValvula) {
+    if (tipoValvula !== 'fuelle') return 1.0;
+    const pct = Math.min(50, Math.max(0, pctContrapresion || 0));
+    for (let i = 1; i < KW_FUELLE.length; i++) {
+      const x0 = KW_FUELLE[i - 1][0], y0 = KW_FUELLE[i - 1][1];
+      const x1 = KW_FUELLE[i][0], y1 = KW_FUELLE[i][1];
       if (pct <= x1) return y0 + ((y1 - y0) * (pct - x0)) / (x1 - x0);
     }
     return 0.86;
@@ -143,11 +160,11 @@
     let A = areaRequeridaGas(base);
 
     // Flujo subcrítico: aproximación isentrópica — escala el área por la
-    // razón de flujo másico relativo al crítico a igual P1 y T (documentada).
+    // razón de flujo másico relativo al MÁXIMO (en r_crit = Pcf/P1).
     let flujoRatio = 1;
     if (!critico) {
       const r = i.P2 / P1;
-      const rc = 2 / (i.k + 1);
+      const rc = Pcf / P1; // relación crítica de presión (no 2/(k+1))
       const f = Math.pow(r, 2 / i.k) - Math.pow(r, (i.k + 1) / i.k);
       const fc = Math.pow(rc, 2 / i.k) - Math.pow(rc, (i.k + 1) / i.k);
       flujoRatio = f / fc;
@@ -168,17 +185,20 @@
     };
   }
 
-  // Líquido: i = { Q, G, set, sobrepresionPct, P2, mu, Kd, Kc, tipoValvula }
+  // Líquido: i = { Q, G, set, sobrepresionPct, P2, mu, Kd, Kc, tipoValvula, Kw? }
   function dimensionarLiquido(i) {
     const P1 = i.set + i.set * (i.sobrepresionPct / 100) + 14.7;
     if (i.P2 >= P1) throw new Error('P1 debe ser > P2 (la contrapresión supera la presión de alivio)');
-    const Kw = i.Kw || 1.0;
+    // Si no se especifica Kw, se toma de la curva API 520 para el tipo
+    // de válvula (1.0 en convencional y pilotada).
+    const pctBPliq = (i.P2 / P1) * 100;
+    const Kw = (i.Kw === undefined || i.Kw === null || isNaN(i.Kw)) ? factorKw(pctBPliq, i.tipoValvula) : i.Kw;
     const r = areaLiquidoConViscosidad({ Q: i.Q, G: i.G, dP: P1 - i.P2, Kd: i.Kd || 0.65, Kw: Kw, Kc: i.Kc, mu: i.mu });
     const orificio = seleccionarOrificio(r.area);
     return {
       modo: 'liquido',
       P1: P1, flujo: 'LIQUIDO',
-      Kv: r.Kv, Re: r.Re, Kw: Kw,
+      Kv: r.Kv, Re: r.Re, Kw: Kw, KwPct: pctBPliq,
       areaRequerida: r.area, orificio: orificio,
       Wreal: i.Q * (orificio.area / r.area),
       usoPct: (r.area / orificio.area) * 100, margenPct: orificio.margenPct,
@@ -191,6 +211,7 @@
     coeficienteExpansionC: coeficienteExpansionC,
     presionCriticaFlujo: presionCriticaFlujo,
     factorKb: factorKb,
+    factorKw: factorKw,
     areaRequeridaGas: areaRequeridaGas,
     capacidadRealGas: capacidadRealGas,
     areaRequeridaLiquido: areaRequeridaLiquido,

@@ -2,13 +2,14 @@
    sw.js — Service worker cache-first (PWA offline).
    Estrategia: precachea el núcleo; sirve de caché y actualiza.
    ============================================================ */
-const CACHE = 'bpi-api520-v2';
+const CACHE = 'bpi-api520-v6';
 const NUCLEO = [
   './index.html',
   './css/styles.css',
   './js/fluids.js',
   './js/orifices.js',
   './js/api520.js',
+  './js/i18n.js',
   './js/chart.js',
   './js/datasheet.js',
   './js/ui.js',

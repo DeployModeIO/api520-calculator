@@ -1,22 +1,22 @@
 'use strict';
 /* ============================================================
    ui.js — Orquestación de la interfaz: estado, validación
-   reactiva, render de resultados, gráficos y datasheet.
+   reactiva, render de resultados, gráficos, datasheet,
+   idioma (ES/EN) y tema (HMI claro / Solarized oscuro).
    ============================================================ */
 (function () {
   'use strict';
 
   const root = window;
-
-  /* ---------- referencias ---------- */
   const $ = function (id) { return document.getElementById(id); };
+  const t = function (k) { return root.I18N ? root.I18N.t(k) : k; };
 
   const refs = {
     modoGas: $('modo-gas'), modoLiq: $('modo-liq'),
     grupoGas: $('grupo-gas'), grupoLiq: $('grupo-liq'),
     fluido: $('fluido'),
     set: $('set'), sobrepresion: $('sobrepresion'), pback: $('pback'), temp: $('temp'),
-    tipov: $('tipov'), kc: $('kc'),
+    tipov: $('tipov'), tipoInfo: $('tipo-info'), tipoChip: $('tipo-chip'), kc: $('kc'),
     w: $('w'), m: $('m'), z: $('z'), kk: $('kk'),
     q: $('q'), g: $('g'), mu: $('mu'), kw: $('kw'),
     alerta: $('alerta'),
@@ -28,6 +28,8 @@
     datasheet: $('datasheet'), printArea: $('print-area'),
     btnCopy: $('btn-copy'), btnPdf: $('btn-pdf'), btnPrint: $('btn-print'),
     avisoExport: $('aviso-export'),
+    selIdioma: $('sel-idioma'), btnTema: $('btn-tema'),
+    iconLuna: $('icon-luna'), iconSol: $('icon-sol'),
   };
 
   const estado = { modo: 'gas', datosUltimos: null, entradaUltima: null };
@@ -51,9 +53,9 @@
     const v = el.value.trim().replace(',', '.');
     let msg = '';
     if (v === '' || !isFinite(Number(v))) {
-      msg = 'Ingrese un valor numérico.';
+      msg = t('err_numero');
     } else if (opts && opts.min !== undefined && Number(v) < opts.min) {
-      msg = 'El valor debe ser ≥ ' + opts.min + '.';
+      msg = t('err_min') + opts.min + '.';
     }
     el.classList.toggle('invalid', !!msg);
     if (errEl) errEl.textContent = msg;
@@ -77,17 +79,19 @@
     for (const fluido of f) {
       const op = document.createElement('option');
       op.value = fluido.id;
-      op.textContent = `${fluido.nombre} — M ${fluido.M}, k ${fluido.k}`;
+      op.textContent = `${t('fl_' + fluido.id)} — M ${fluido.M}, k ${fluido.k}`;
       refs.fluido.appendChild(op);
     }
     const pers = document.createElement('option');
     pers.value = 'custom';
-    pers.textContent = 'Personalizado (editado)';
+    pers.textContent = t('fl_custom');
     refs.fluido.appendChild(pers);
-    const sel = document.createElement('option');
-    sel.value = 'liquido-agua';
-    sel.textContent = 'Agua (servicio líquido)';
-    refs.fluido.insertBefore(sel, pers);
+  }
+
+  function nombreFluido() {
+    const id = refs.fluido.value;
+    if (id === 'custom') return t('fl_custom');
+    return t('fl_' + id);
   }
 
   function aplicarFluido() {
@@ -98,14 +102,31 @@
     refs.kk.value = f.k;
     refs.z.value = f.Z;
     refs.mu.value = f.muLiquido;
-    if (estado.modo === 'liquido') refs.g.value = Math.max(0.05, f.M / 28.96).toFixed(2);
+    if (estado.modo === 'liquido') {
+      refs.g.value = f.GLiquido !== undefined ? f.GLiquido : Math.max(0.05, f.M / 28.96).toFixed(2);
+    }
+  }
+
+  /* ---------- tipo de válvula: info contextual + chip ---------- */
+  function actualizarTipoV() {
+    const tipo = refs.tipov.value;
+    refs.tipoInfo.textContent = t('tipo_info_' + tipo);
+    refs.tipoChip.textContent = tipo === 'pilot' ? 'POSRV' : (estado.modo === 'gas' ? 'SRV' : 'RV');
+    // Kw: al entrar en modo líquido con fuelle, sugerir valor de curva API
+    if (estado.modo === 'liquido' && tipo === 'fuelle') {
+      const P1 = num('set') * (1 + Number(refs.sobrepresion.value) / 100) + 14.7;
+      const P2 = num('pback') + 14.7;
+      if (isFinite(P1) && isFinite(P2) && P1 > 0) {
+        refs.kw.value = API520.factorKw((P2 / P1) * 100, 'fuelle').toFixed(3);
+      }
+    }
   }
 
   /* ---------- recolección de entrada ---------- */
   function recolectar() {
     return {
       modo: estado.modo,
-      fluido: refs.fluido.options[refs.fluido.selectedIndex].text.split(' — ')[0],
+      fluido: nombreFluido(),
       set: num('set'),
       sobrepresionPct: Number(refs.sobrepresion.value),
       pback: num('pback'),
@@ -124,47 +145,45 @@
   }
 
   function render(r, entrada) {
-    // estado de flujo
     if (r.flujo === 'CRITICO') {
-      pillEstado('pill-ok', 'FLUJO CRÍTICO');
-      refs.estadoSub.textContent = 'P2 ≤ Pcf — diseño API 520 estándar';
+      pillEstado('pill-ok', t('estado_critico'));
+      refs.estadoSub.textContent = t('estado_sub_critico');
     } else if (r.flujo === 'SUBCRITICO') {
-      pillEstado('pill-warn', 'FLUJO SUBCRÍTICO');
-      refs.estadoSub.textContent = 'P2 > Pcf — verificar selección de válvula';
+      pillEstado('pill-warn', t('estado_subcritico'));
+      refs.estadoSub.textContent = t('estado_sub_subcritico');
     } else {
-      pillEstado('pill-ok', 'SERVICIO LÍQUIDO');
-      refs.estadoSub.textContent = 'Dimensionamiento API 520 Secc. 5.7';
+      pillEstado('pill-ok', t('estado_liq'));
+      refs.estadoSub.textContent = t('estado_sub_liq');
     }
 
     refs.oOrificio.textContent = r.orificio.letra;
     refs.oAreaOrif.textContent = fmt(r.orificio.area) + ' in²';
     refs.oArea.textContent = fmt(r.areaRequerida, 4) + ' in²';
     refs.oUso.textContent = fmt(r.usoPct, 1) + ' %';
-    const uso = r.usoPct;
-    refs.oUso.style.color = uso > 95 ? 'var(--err-txt)' : 'var(--txt)';
+    refs.oUso.style.color = r.usoPct > 95 ? 'var(--err-txt)' : '';
     refs.oMargen.textContent = '+' + fmt(r.margenPct, 1) + ' %';
 
+    const tipoLabel = t('opt_' + entrada.tipoValvula);
     if (r.modo === 'gas') {
       refs.oWreal.textContent = fmt(Math.round(r.Wreal), 0) + ' lb/hr';
       refs.oC.textContent = fmt(r.C, 2);
-      refs.oKb.textContent = fmt(r.Kb, 3) + ' (' + entrada.tipoValvula + ')';
+      refs.oKb.textContent = fmt(r.Kb, 3) + ' (' + tipoLabel + ')';
       refs.oPcf.textContent = fmt(r.Pcf, 2) + ' psia';
-      refs.oExtra.textContent = 'n/a en modo gas';
+      refs.oExtra.textContent = t('na_gas');
     } else {
       refs.oWreal.textContent = fmt(Math.round(r.Wreal), 0) + ' GPM';
-      refs.oC.textContent = 'n/a en modo líquido';
-      refs.oKb.textContent = 'n/a en modo líquido';
-      refs.oPcf.textContent = 'n/a en modo líquido';
-      refs.oExtra.textContent = fmt(r.Kv, 3) + ' / ' + fmt(Math.round(r.Re), 0);
+      refs.oC.textContent = t('na_liq');
+      refs.oKb.textContent = t('na_liq');
+      refs.oPcf.textContent = t('na_liq');
+      refs.oExtra.textContent = fmt(r.Kv, 3) + ' / ' + fmt(Math.round(r.Re), 0) + ' · Kw ' + fmt(r.Kw, 3);
     }
 
-    // donut: uso del orificio
     ChartsHMI.donut(refs.donut, r.usoPct, r.flujo);
 
-    // gráfico de barras: capacidad a 10/16/21 %
+    // gráfico: capacidad a 10/16/21 % de sobrepresión
     let series;
     if (r.modo === 'gas') {
-      const p1Base = entrada.set * (1 + 0.10) + 14.7;
+      const p1Base = entrada.set * 1.10 + 14.7;
       series = [10, 16, 21].map(function (pct) {
         const p1 = entrada.set * (1 + pct / 100) + 14.7;
         return { label: pct + '%', valor: r.Wreal * (p1 / p1Base), destacado: pct === entrada.sobrepresionPct };
@@ -176,10 +195,8 @@
         return { label: pct + '%', valor: r.Wreal * Math.sqrt(dP / dPBase), destacado: pct === entrada.sobrepresionPct };
       });
     }
-    const wReq = r.modo === 'gas' ? entrada.W : entrada.Q;
-    ChartsHMI.barras(refs.chart, series, wReq);
+    ChartsHMI.barras(refs.chart, series, r.modo === 'gas' ? entrada.W : entrada.Q);
 
-    // datasheet
     const texto = Datasheet.construirTexto(r, entrada, entrada.fluido);
     refs.datasheet.textContent = texto;
     refs.printArea.textContent = texto;
@@ -195,7 +212,6 @@
     limpiarErrores();
     const entrada = recolectar();
 
-    // validación por campo según modo
     let ok = true;
     ok = validarCampo('set', { min: 0.1 }) && ok;
     ok = validarCampo('pback', { min: 0 }) && ok;
@@ -227,11 +243,11 @@
       estado.entradaUltima = entrada;
       render(r, entrada);
     } catch (e) {
-      // errores termodinámicos del núcleo (Z, k, P1, etc.)
-      const msg = e.message || 'Error de cálculo';
-      if (/^Z /.test(msg)) { validarCampo('z'); $('err-z').textContent = msg; }
-      else if (/^k /.test(msg)) { validarCampo('kk'); $('err-kk').textContent = msg; }
-      else if (/^P1 /.test(msg)) { $('err-pback').textContent = 'P2 ≥ P1: reduzca la contrapresión.'; }
+      const msg = e.message || 'Error';
+      if (/^Z /.test(msg)) { $('err-z').textContent = t('errZ'); }
+      else if (/^k /.test(msg)) { $('err-kk').textContent = t('errK'); }
+      else if (/^P1 /.test(msg)) { $('err-pback').textContent = t('errP1'); }
+      else if (/excede|excede el mayor/i.test(msg)) { mostrarError(t('errOrif')); }
       else { mostrarError(msg); }
     }
   }
@@ -240,17 +256,15 @@
   refs.btnCopy.addEventListener('click', async function () {
     if (!estado.datosUltimos) return;
     const ok = await Datasheet.copiar(refs.datasheet.textContent);
-    refs.avisoExport.textContent = ok ? 'Copiada al portapapeles.' : 'No se pudo copiar: seleccione el texto manualmente.';
+    refs.avisoExport.textContent = ok ? t('aviso_copiada') : t('aviso_seleccion');
     setTimeout(function () { refs.avisoExport.textContent = ''; }, 3000);
   });
 
   refs.btnPdf.addEventListener('click', async function () {
     if (!estado.datosUltimos) return;
-    refs.avisoExport.textContent = 'Generando PDF…';
+    refs.avisoExport.textContent = t('aviso_pdf_gen');
     const ok = await Datasheet.exportarPDF(refs.datasheet.textContent);
-    refs.avisoExport.textContent = ok
-      ? 'PDF generado.'
-      : 'Sin conexión al CDN: use "Imprimir" → "Guardar como PDF".';
+    refs.avisoExport.textContent = ok ? t('aviso_pdf_ok') : t('aviso_pdf_cdn');
     setTimeout(function () { refs.avisoExport.textContent = ''; }, 5000);
   });
 
@@ -266,10 +280,44 @@
     refs.modoLiq.setAttribute('aria-selected', String(!gas));
     refs.grupoGas.hidden = !gas;
     refs.grupoLiq.hidden = gas;
+    if (!gas) aplicarFluido(); // reaplica propiedades del fluido (G, μ)
+    actualizarTipoV();
     recalcular();
   }
   refs.modoGas.addEventListener('click', function () { setModo('gas'); });
   refs.modoLiq.addEventListener('click', function () { setModo('liquido'); });
+
+  /* ---------- idioma ---------- */
+  function aplicarIdioma(lang) {
+    root.I18N.setLang(lang);
+    document.documentElement.lang = lang;
+    try { localStorage.setItem('bpi-idioma', lang); } catch (e) { /* modo privado */ }
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function (el) {
+      el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
+    });
+    poblarFluidos();
+    actualizarTipoV();
+    recalcular();
+  }
+  refs.selIdioma.addEventListener('change', function () { aplicarIdioma(refs.selIdioma.value); });
+
+  /* ---------- tema (HMI claro / Solarized oscuro) ---------- */
+  function aplicarTema(tema) {
+    document.documentElement.setAttribute('data-theme', tema);
+    try { localStorage.setItem('bpi-tema', tema); } catch (e) { /* modo privado */ }
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', tema === 'dark' ? '#002b36' : '#16385e');
+    refs.iconLuna.hidden = tema === 'dark';
+    refs.iconSol.hidden = tema !== 'dark';
+    recalcular(); // redibuja gráficos con la nueva paleta
+  }
+  refs.btnTema.addEventListener('click', function () {
+    const actual = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    aplicarTema(actual);
+  });
 
   /* ---------- eventos reactivos ---------- */
   refs.fluido.addEventListener('change', function () { aplicarFluido(); recalcular(); });
@@ -277,7 +325,8 @@
     const el = $(id);
     if (el) el.addEventListener('input', recalcular);
   });
-  ['sobrepresion', 'tipov', 'kc'].forEach(function (id) {
+  refs.tipov.addEventListener('change', function () { actualizarTipoV(); recalcular(); });
+  ['sobrepresion', 'kc'].forEach(function (id) {
     $(id).addEventListener('change', recalcular);
   });
 
@@ -287,7 +336,15 @@
   }
 
   /* ---------- arranque ---------- */
-  poblarFluidos();
+  let temaGuardado = 'light', idiomaGuardado = 'es';
+  try {
+    temaGuardado = localStorage.getItem('bpi-tema') || 'light';
+    idiomaGuardado = localStorage.getItem('bpi-idioma') || 'es';
+  } catch (e) { /* modo privado */ }
+  refs.selIdioma.value = idiomaGuardado;
+  document.documentElement.setAttribute('data-theme', temaGuardado);
+  refs.iconLuna.hidden = temaGuardado === 'dark';
+  refs.iconSol.hidden = temaGuardado !== 'dark';
+  aplicarIdioma(idiomaGuardado);
   ChartsHMI.activarTooltip(refs.chart);
-  recalcular();
 })();

@@ -1,78 +1,86 @@
 'use strict';
 /* ============================================================
    datasheet.js — Hoja de especificación de datos de proceso
-   (formato API 520 / ISA S20 aproximado).
+   (formato API 520 / ISA S20 aproximado), bilingüe ES/EN.
    Acciones: copiar al portapapeles, exportar PDF (jsPDF por CDN
    con fallback a impresión), imprimir.
    ============================================================ */
 (function (root) {
   'use strict';
 
+  function ds(clave) {
+    return (root.I18N && root.I18N.t(clave) !== clave) ? root.I18N.t(clave) : clave;
+  }
+
   function fecha() {
-    return new Date().toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const loc = (root.I18N && root.I18N.getLang() === 'en') ? 'en-US' : 'es-ES';
+    return new Date().toLocaleDateString(loc, { year: 'numeric', month: '2-digit', day: '2-digit' });
   }
 
   function linea(ch) { return ch.repeat(66); }
 
   function campo(etiqueta, valor) {
-    const puntos = '.'.repeat(Math.max(2, 26 - etiqueta.length));
+    const puntos = '.'.repeat(Math.max(2, 28 - etiqueta.length));
     return ` ${etiqueta} ${puntos} ${valor}`;
   }
 
   /* ---------- generación de texto ---------- */
   function construirTexto(r, entrada, nombreFluido) {
+    const regimen = r.flujo === 'CRITICO' ? ds('ds_critico')
+      : r.flujo === 'SUBCRITICO' ? ds('ds_subcritico') : ds('ds_liq');
     const L = [];
     L.push(linea('='));
-    L.push('   HOJA DE ESPECIFICACION DE DATOS DE PROCESO — VALVULA DE ALIVIO (PSV)');
-    L.push('   Formato API 520 / ISA S20 (aproximacion) — generado localmente');
+    L.push('   ' + ds('ds_title1'));
+    L.push('   ' + ds('ds_title2'));
     L.push(linea('='));
-    L.push(campo('Fecha', fecha()));
-    L.push(campo('Fluido', nombreFluido));
-    L.push(campo('Modo de calculo', r.modo === 'gas' ? 'Gas / Vapor' : 'Liquido'));
-    L.push(campo('Regimen de flujo', r.flujo));
+    L.push(campo(ds('ds_fecha'), fecha()));
+    L.push(campo(ds('ds_fluido'), nombreFluido));
+    L.push(campo(ds('ds_modo'), r.modo === 'gas' ? ds('ds_modo_gas') : ds('ds_modo_liq')));
+    L.push(campo(ds('ds_regimen'), regimen));
+    L.push(campo(ds('ds_tipo'), ds('opt_' + entrada.tipoValvula)));
     L.push(linea('-'));
-    L.push(' CONDICIONES DE OPERACION');
-    L.push(campo('Presion de ajuste', entrada.set.toFixed(2) + ' psig'));
-    L.push(campo('Sobrepresion', entrada.sobrepresionPct + ' %'));
-    L.push(campo('P1 (alivio absoluta)', r.P1.toFixed(2) + ' psia'));
-    L.push(campo('Contrapresion P2', (entrada.pback + 14.7).toFixed(2) + ' psia (' + entrada.pback + ' psig)'));
+    L.push(' ' + ds('ds_cond'));
+    L.push(campo(ds('ds_set'), entrada.set.toFixed(2) + ' psig'));
+    L.push(campo(ds('ds_sobrep'), entrada.sobrepresionPct + ' %'));
+    L.push(campo(ds('ds_p1'), r.P1.toFixed(2) + ' psia'));
+    L.push(campo(ds('ds_p2'), (entrada.pback + 14.7).toFixed(2) + ' psia (' + entrada.pback + ' psig)'));
     if (r.modo === 'gas') {
-      L.push(campo('Pcf (presion critica)', r.Pcf.toFixed(2) + ' psia'));
-      L.push(campo('Temperatura de alivio', (entrada.temp + 459.67).toFixed(2) + ' R (' + entrada.temp + ' F)'));
+      L.push(campo(ds('ds_pcf'), r.Pcf.toFixed(2) + ' psia'));
+      L.push(campo(ds('ds_temp'), (entrada.temp + 459.67).toFixed(2) + ' R (' + entrada.temp + ' F)'));
     }
     L.push(linea('-'));
-    L.push(' PROPIEDADES DEL FLUIDO');
+    L.push(' ' + ds('ds_prop'));
     if (r.modo === 'gas') {
-      L.push(campo('M (peso molecular)', entrada.M.toFixed(2) + ' lb/lbmol'));
-      L.push(campo('k (Cp/Cv)', entrada.k.toFixed(2)));
-      L.push(campo('Z (compresibilidad)', entrada.Z.toFixed(2)));
-      L.push(campo('C (expansion isentropica)', r.C.toFixed(2)));
-      L.push(campo('Kb (contrapresion)', r.Kb.toFixed(3) + '  [' + entrada.tipoValvula + ']'));
+      L.push(campo(ds('ds_m'), entrada.M.toFixed(2) + ' lb/lbmol'));
+      L.push(campo(ds('ds_k'), entrada.k.toFixed(2)));
+      L.push(campo(ds('ds_z'), entrada.Z.toFixed(2)));
+      L.push(campo(ds('ds_c'), r.C.toFixed(2)));
+      L.push(campo(ds('ds_kb'), r.Kb.toFixed(3)));
     } else {
-      L.push(campo('G (gravedad especifica)', entrada.G.toFixed(2)));
-      L.push(campo('mu (viscosidad)', entrada.mu.toFixed(2) + ' cP'));
-      L.push(campo('Kv (viscosidad)', r.Kv.toFixed(3)));
-      L.push(campo('Reynolds (orificio)', Math.round(r.Re).toLocaleString('en-US')));
-      L.push(campo('Kw', r.Kw.toFixed(3)));
+      L.push(campo(ds('ds_g'), entrada.G.toFixed(2)));
+      L.push(campo(ds('ds_mu'), entrada.mu.toFixed(2) + ' cP'));
+      L.push(campo(ds('ds_kv'), r.Kv.toFixed(3)));
+      L.push(campo(ds('ds_re'), Math.round(r.Re).toLocaleString('en-US')));
+      L.push(campo(ds('ds_kw'), r.Kw.toFixed(3)));
     }
-    L.push(campo('Kd (descarga)', (r.modo === 'gas' ? 0.975 : 0.65).toFixed(3)));
-    L.push(campo('Kc (disco de ruptura)', entrada.Kc.toFixed(1)));
+    L.push(campo(ds('ds_kd'), (r.modo === 'gas' ? 0.975 : 0.65).toFixed(3)));
+    L.push(campo(ds('ds_kc'), entrada.Kc.toFixed(1)));
     L.push(linea('-'));
-    L.push(' RESULTADOS API 520 PARTE I');
-    L.push(campo('Area requerida', r.areaRequerida.toFixed(4) + ' in2'));
-    L.push(campo('Orificio API 526', r.orificio.letra + ' — ' + r.orificio.area.toFixed(3) + ' in2'));
-    L.push(campo('Uso del orificio', r.usoPct.toFixed(1) + ' %'));
-    L.push(campo('Margen de capacidad', '+' + r.margenPct.toFixed(1) + ' %'));
+    L.push(' ' + ds('ds_res'));
+    L.push(campo(ds('ds_area_req'), r.areaRequerida.toFixed(4) + ' in2'));
+    L.push(campo(ds('ds_orificio'), r.orificio.letra + ' — ' + r.orificio.area.toFixed(3) + ' in2'));
+    L.push(campo(ds('ds_uso'), r.usoPct.toFixed(1) + ' %'));
+    L.push(campo(ds('ds_margen'), '+' + r.margenPct.toFixed(1) + ' %'));
     if (r.modo === 'gas') {
-      L.push(campo('Capacidad real W_real', Math.round(r.Wreal).toLocaleString('en-US') + ' lb/hr'));
-      L.push(campo('Caudal requerido W', Math.round(entrada.W).toLocaleString('en-US') + ' lb/hr'));
+      L.push(campo(ds('ds_wreal'), Math.round(r.Wreal).toLocaleString('en-US') + ' lb/hr'));
+      L.push(campo(ds('ds_wreq'), Math.round(entrada.W).toLocaleString('en-US') + ' lb/hr'));
     } else {
-      L.push(campo('Capacidad real Q_real', Math.round(r.Wreal).toLocaleString('en-US') + ' GPM'));
-      L.push(campo('Caudal requerido Q', Math.round(entrada.Q).toLocaleString('en-US') + ' GPM'));
+      L.push(campo(ds('ds_qreal'), Math.round(r.Wreal).toLocaleString('en-US') + ' GPM'));
+      L.push(campo(ds('ds_qreq'), Math.round(entrada.Q).toLocaleString('en-US') + ' GPM'));
     }
     L.push(linea('='));
-    L.push(' NOTA: herramienta de apoyo a ingenieria. Validar contra API STD 520');
-    L.push(' Parte I (10a Ed.) y API STD 526. Factores Kb/Kv: aproximaciones.');
+    L.push(' ' + ds('ds_nota1'));
+    L.push(' ' + ds('ds_nota2'));
     L.push(linea('='));
     return L.join('\n');
   }

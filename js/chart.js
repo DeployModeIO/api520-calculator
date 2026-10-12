@@ -2,22 +2,36 @@
 /* ============================================================
    chart.js — Gráficos Canvas nativos sin librerías.
    Donut de uso del orificio + barras de capacidad vs sobrepresión.
-   Paleta: navy primario, esmeralda operativo, naranja crítico.
+   Paleta tomada de los tokens CSS en cada dibujo: funciona con
+   tema claro HMI y tema oscuro Solarized.
    ============================================================ */
 (function (root) {
   'use strict';
 
-  const CSS = getComputedStyle(document.documentElement);
-  const C = {
-    navy: CSS.getPropertyValue('--primary').trim() || '#16385e',
-    ring: CSS.getPropertyValue('--border').trim() || '#e2e8f0',
-    txt: CSS.getPropertyValue('--txt').trim() || '#0f2a4a',
-    txt2: CSS.getPropertyValue('--txt2').trim() || '#47586b',
-    ok: CSS.getPropertyValue('--ok').trim() || '#10b981',
-    err: CSS.getPropertyValue('--err').trim() || '#ea580c',
-    mono: CSS.getPropertyValue('--mono').trim() || 'monospace',
-  };
-  const NAVY_SOFT = 'rgba(22, 56, 94, 0.14)';
+  function paleta() {
+    const s = getComputedStyle(document.documentElement);
+    const g = function (v) { return s.getPropertyValue(v).trim(); };
+    return {
+      navy: g('--primary') || '#16385e',
+      ring: g('--border') || '#e2e8f0',
+      txt: g('--txt') || '#0f2a4a',
+      txt2: g('--txt2') || '#47586b',
+      ok: g('--ok') || '#10b981',
+      err: g('--err') || '#ea580c',
+      mono: g('--mono') || 'monospace',
+    };
+  }
+
+  function rgba(hex, a) {
+    const h = hex.replace('#', '');
+    const n = h.length === 3 ? h.split('').map(function (c) { return c + c; }).join('') : h.slice(0, 6);
+    const r = parseInt(n.slice(0, 2), 16), g = parseInt(n.slice(2, 4), 16), b = parseInt(n.slice(4, 6), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+
+  function t(clave, fallback) {
+    return (root.I18N && root.I18N.t(clave) !== clave) ? root.I18N.t(clave) : fallback;
+  }
 
   function prepararCanvas(canvas) {
     const dpr = root.devicePixelRatio || 1;
@@ -33,10 +47,8 @@
   }
 
   /* ---------- donut: % de uso del orificio ---------- */
-  let donutUltimo = { usoPct: 0, critico: false };
-
   function dibujarDonut(canvas, usoPct, critico) {
-    donutUltimo = { usoPct: usoPct, critico: critico };
+    const C = paleta();
     const _ = prepararCanvas(canvas);
     const ctx = _.ctx, w = _.w, h = _.h;
     const cx = w / 2, cy = h / 2;
@@ -69,7 +81,7 @@
     ctx.fillText(uso.toFixed(0) + '%', cx, cy - r * 0.06);
     ctx.fillStyle = C.txt2;
     ctx.font = `600 ${Math.round(r * 0.15)}px ${C.mono}`;
-    ctx.fillText('USO ORIFICIO', cx, cy + r * 0.34);
+    ctx.fillText(t('donut_uso', 'USO ORIFICIO'), cx, cy + r * 0.34);
   }
 
   /* ---------- barras: capacidad vs sobrepresión ---------- */
@@ -86,6 +98,8 @@
   }
 
   function dibujarBarras(canvas, series, wReq) {
+    const C = paleta();
+    const SUAVE = rgba(C.navy, 0.16);
     chartEstado = { series: series, wReq: wReq, canvas: canvas, barras: [] };
     const _ = prepararCanvas(canvas);
     const ctx = _.ctx, w = _.w, h = _.h;
@@ -97,7 +111,7 @@
     const maxVal = Math.max.apply(null, series.map(function (s) { return s.valor; }).concat([wReq || 0])) * 1.12 || 1;
 
     // rejilla horizontal (4 divisiones)
-    ctx.strokeStyle = NAVY_SOFT;
+    ctx.strokeStyle = C.ring;
     ctx.fillStyle = C.txt2;
     ctx.lineWidth = 1;
     ctx.font = `600 11px ${C.mono}`;
@@ -135,7 +149,7 @@
       const x = padL + paso * i + (paso - ancho) / 2;
       const hBarra = (s.valor / maxVal) * chartH;
       const y = padT + chartH - hBarra;
-      ctx.fillStyle = s.destacado ? C.navy : NAVY_SOFT;
+      ctx.fillStyle = s.destacado ? C.navy : SUAVE;
       ctx.fillRect(x, y, ancho, hBarra);
       ctx.strokeStyle = C.navy;
       ctx.lineWidth = 1.5;
@@ -167,7 +181,7 @@
     ctx.stroke();
   }
 
-  // Tooltip por hover/touch sobre las barras
+  // Tooltip por hover sobre las barras
   function activarTooltip(canvas) {
     canvas.addEventListener('mousemove', function (ev) {
       const rect = canvas.getBoundingClientRect();

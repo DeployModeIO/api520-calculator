@@ -9,7 +9,9 @@ Panel de control ejecutivo HMI industrial en **Light Mode estricto**: Bento Grid
 - **Gas / vapor**: presión crítica de flujo (Pcf), coeficiente de expansión isentrópica (C), área requerida `A = W/(C·Kd·P1·Kb·Kc) · √(T·Z/M)`, detección de flujo crítico/subcrítico.
 - **Líquido**: `A = Q/(38·Kd·Kw·Kc·Kv) · √(G/ΔP)` con corrección de viscosidad **Kv iterativa** (correlación API en función de Reynolds, aproximación documentada).
 - **Selección automática de orificio API 526** (D–T) con capacidad real certificada `W_real`, uso y margen.
-- **Kb por contrapresión**: 1.0 convencional en crítico; interpolación de curvas API (aproximación editable) para válvula de fuelle.
+- **Tres tipos de válvula (API 520 Parte I)** con física diferenciada: **Convencional** (Kb=1.0 en flujo crítico, sensible a contrapresión superimpuesta), **Fuelle balanceada** (curvas Kb en gas y Kw en líquido — aproximaciones editables) y **Pilotada POSRV** (Kb=1.0: la presión de ajuste no se ve afectada por la contrapresión acumulada; piloto snap-acting o modulante).
+- **Bilingüe ES/EN** con selector de idioma persistente (`localStorage`).
+- **Dos temas**: HMI claro (por defecto) y **oscuro Solarized** (`data-theme="dark"` con override de tokens); los gráficos Canvas leen la paleta de los tokens en cada dibujo.
 - **Gráfico Canvas nativo**: capacidad certificada a 10 / 16 / 21 % de sobrepresión con tooltips; donut de uso del orificio.
 - **Hoja de especificación (Datasheet)** estilo API 520 / ISA S20: copiar al portapapeles, exportar PDF (jsPDF por CDN con *fallback* a impresión) e imprimir.
 - **Validación reactiva inline**: `Z ≤ 0`, `k ≤ 1.0`, `P1 ≤ P2`, valores vacíos o no numéricos.
@@ -50,7 +52,7 @@ npx electron-packager . CalculadoraAPI520 --platform=win32 --arch=x64 --out=dist
 node tests/run.js
 ```
 
-Suite TDD (`node:assert/strict`, sin framework) con casos verificados a mano: coeficiente C, área de gas, selección de orificio, área de líquido, Pcf, validaciones termodinámicas e interpolación de Kb.
+Suite TDD (`node:assert/strict`, sin framework) con casos verificados a mano: coeficiente C, área de gas, selección de orificio, área de líquido, Pcf, validaciones termodinámicas, curvas Kb/Kw, pilotada (Kb=1.0), catálogo de fluidos y paridad de diccionarios i18n ES/EN.
 
 ## ¿Por qué no lleva backend?
 
@@ -62,4 +64,9 @@ Tokens en `:root` (`css/styles.css`): fondo `#f5f6f8`, tarjetas `#ffffff`, navy 
 
 ## Aviso de ingeniería
 
-Herramienta de apoyo. Los factores de curva (Kb de fuelle, Kv de viscosidad) son **aproximaciones documentadas de las curvas API 520 Parte I** y son editables. Validar siempre contra las ediciones vigentes de API STD 520 / 526 y los datos del fabricante de la válvula.
+Herramienta de apoyo. Los factores de curva (Kb de fuelle, Kw de fuelle, Kv de viscosidad) son **aproximaciones documentadas de las curvas API 520 Parte I** y son editables. Validar siempre contra las ediciones vigentes de API STD 520 / 526 y los datos del fabricante de la válvula.
+
+## Fuentes de referencia (tipos de válvula y terminología)
+
+- Wikipedia — *Relief valve* (terminología PRV/PSV/RV/SRV/POSRV, blowdown, estándares API 520/521/526, ASME VIII, ISO 4126): https://en.wikipedia.org/wiki/Relief_valve
+- Wikipedia — *Pilot-operated relief valve* (funcionamiento snap-acting vs modulating, ventajas frente a contrapresión alta): https://en.wikipedia.org/wiki/Pilot-operated_relief_valve
