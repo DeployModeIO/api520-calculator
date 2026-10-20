@@ -240,6 +240,29 @@ t('Continuidad: en r = rc la fórmula subcrítica (735) coincide con la crítica
     'A_sub=' + sub.areaRequerida + ' A_crit=' + critico.areaRequerida);
 });
 
+// ---- Contrapresión como % del set (API 520 Fig. 30) ----
+
+t('dimensionarGas fuelle: contrapresionPct=30% del set → Kb≈0.950 y flujo CRITICO', () => {
+  const r = A.dimensionarGas({ W: 5000, set: 100, sobrepresionPct: 10, P2: 44.7, contrapresionPct: 30, k: 1.25, M: 18.5, Z: 1, T: 559.67, Kc: 1, tipoValvula: 'fuelle' });
+  assert.equal(r.flujo, 'CRITICO');
+  assert.ok(Math.abs(r.Kb - 0.950) <= 0.001, 'Kb=' + r.Kb);
+});
+
+t('dimensionarGas pilot: contrapresionPct=30% → Kb=1.000', () => {
+  const r = A.dimensionarGas({ W: 5000, set: 100, sobrepresionPct: 10, P2: 44.7, contrapresionPct: 30, k: 1.25, M: 18.5, Z: 1, T: 559.67, Kc: 1, tipoValvula: 'pilot' });
+  assert.equal(r.Kb, 1.0);
+});
+
+t('dimensionarGas convencional: contrapresionPct=30% → Kb=1.000', () => {
+  const r = A.dimensionarGas({ W: 5000, set: 100, sobrepresionPct: 10, P2: 44.7, contrapresionPct: 30, k: 1.25, M: 18.5, Z: 1, T: 559.67, Kc: 1, tipoValvula: 'convencional' });
+  assert.equal(r.Kb, 1.0);
+});
+
+t('dimensionarVapor fuelle: contrapresionPct=30% → Kb≈0.950', () => {
+  const r = A.dimensionarVapor({ W: 5000, set: 100, sobrepresionPct: 10, P2: 44.7, contrapresionPct: 30, T: 400, saturado: true, Kc: 1, tipoValvula: 'fuelle' });
+  assert.ok(Math.abs(r.Kb - 0.950) <= 0.001, 'Kb=' + r.Kb);
+});
+
 // ---- Ejecución ----
 let ok = 0;
 let fail = 0;

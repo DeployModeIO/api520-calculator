@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 480" role="img" aria-labelledby="bnr-title bnr-desc">
+  <title id="bnr-title">Calculadora de Válvulas de Alivio</title>
+  <desc id="bnr-desc">Banner de la calculadora de válvulas de alivio API STD 520 Parte I y API 526, con composición geométrica plana que evoca un orificio de válvula y un gráfico de barras.</desc>
+
+  <!-- fondo navy plano -->
+  <rect x="0" y="0" width="1600" height="480" fill="#16385e"/>
+
+  <!-- ============ columna izquierda: texto + chips ============ -->
+  <text x="80" y="106" font-family="system-ui, 'Segoe UI', Inter, Roboto, sans-serif" font-size="18" font-weight="700" letter-spacing="4" fill="#10b981">DIMENSIONAMIENTO PSV</text>
+
+  <text x="80" y="166" font-family="system-ui, 'Segoe UI', Inter, Roboto, sans-serif" font-size="60" font-weight="800" fill="#ffffff">Calculadora de</text>
+  <text x="80" y="238" font-family="system-ui, 'Segoe UI', Inter, Roboto, sans-serif" font-size="60" font-weight="800" fill="#ffffff">Válvulas de Alivio</text>
+
+  <!-- subrayado acento de dos tonos -->
+  <rect x="80" y="258" width="150" height="6" rx="3" fill="#ea580c"/>
+  <rect x="236" y="258" width="56" height="6" rx="3" fill="#10b981"/>
+
+  <text x="80" y="302" font-family="system-ui, 'Segoe UI', Inter, Roboto, sans-serif" font-size="23" font-weight="500" fill="#c9d9ea">API STD 520 Parte I · API 526 · Panel HMI offline</text>
+
+  <!-- chips técnicos (fila 1) -->
+  <g>
+    <rect x="80" y="336" width="214" height="44" rx="22" fill="rgba(255,255,255,0.07)" stroke="#3d6289" stroke-width="1"/>
+    <circle cx="100" cy="358" r="5" fill="#10b981"/>
+    <text x="118" y="364" font-family="system-ui, 'Segoe UI', Inter, Roboto, sans-serif" font-size="17" font-weight="600" fill="#eaf1f8">Gas · Vapor · Líquido</text>
+  </g>
+  <g>
+    <rect x="310" y="336" width="214" height="44" rx="22" fill="rgba(255,255,255,0.07)" stroke="#3d6289" stroke-width="1"/>
+    <circle cx="330" cy="358" r="5" fill="#ea580c"/>
+    <text x="348" y="364" font-family="system-ui, 'Segoe UI', Inter, Roboto, sans-serif" font-size="17" font-weight="600" fill="#eaf1f8">Crítico / Subcrítico</text>
+  </g>
+
+  <!-- chips técnicos (fila 2) -->
+  <g>
+    <rect x="80" y="392" width="154" height="44" rx="22" fill="rgba(255,255,255,0.07)" stroke="#3d6289" stroke-width="1"/>
+    <circle cx="100" cy="414" r="5" fill="#10b981"/>
+    <text x="118" y="420" font-family="system-ui, 'Segoe UI', Inter, Roboto, sans-serif" font-size="17" font-weight="600" fill="#eaf1f8">Orificios D–T</text>
+  </g>
+  <g>
+    <rect x="250" y="392" width="189" height="44" rx="22" fill="rgba(255,255,255,0.07)" stroke="#3d6289" stroke-width="1"/>
+    <circle cx="270" cy="414" r="5" fill="#ea580c"/>
+    <text x="288" y="420" font-family="system-ui, 'Segoe UI', Inter, Roboto, sans-serif" font-size="17" font-weight="600" fill="#eaf1f8">PWA 100 % offline</text>
+  </g>
+
+  <!-- ============ columna derecha: composición geométrica ============ -->
+
+  <!-- gráfico de barras -->
+  <line x1="948" y1="360" x2="1166" y2="360" stroke="#7ba0c9" stroke-width="2" opacity="0.5"/>
+  <rect x="960" y="290" width="38" height="70" fill="#10b981"/>
+  <rect x="1014" y="234" width="38" height="126" fill="#ea580c"/>
+  <rect x="1068" y="266" width="38" height="94" fill="#10b981"/>
+  <rect x="1122" y="196" width="38" height="164" fill="#10b981"/>
+  <rect x="1122" y="196" width="38" height="36" fill="#ea580c"/>
+
+  <!-- disco de fondo para el orificio -->
+  <circle cx="1390" cy="210" r="160" fill="#1d4a7a"/>
+
+  <!-- orificio de válvula: anillos concéntricos -->
+  <circle cx="1390" cy="210" r="112" fill="none" stroke="#10b981" stroke-width="6"/>
+  <circle cx="1390" cy="210" r="78" fill="none" stroke="#ea580c" stroke-width="5"/>
+  <circle cx="1390" cy="210" r="46" fill="#10b981"/>
+  <circle cx="1390" cy="210" r="15" fill="#16385e"/>
+
+  <!-- retícula de referencia -->
+  <line x1="1270" y1="210" x2="1510" y2="210" stroke="#7ba0c9" stroke-width="2" opacity="0.35"/>
+  <line x1="1390" y1="90" x2="1390" y2="330" stroke="#7ba0c9" stroke-width="2" opacity="0.35"/>
+
+  <!-- vástago y mango de la válvula -->
+  <line x1="1390" y1="98" x2="1390" y2="54" stroke="#ea580c" stroke-width="8" stroke-linecap="round"/>
+  <rect x="1378" y="40" width="24" height="14" rx="4" fill="#ea580c"/>
+
+  <!-- acentos decorativos -->
+  <circle cx="1510" cy="150" r="8" fill="#10b981"/>
+  <circle cx="1284" cy="302" r="7" fill="#ea580c"/>
+</svg>

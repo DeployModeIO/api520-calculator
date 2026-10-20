@@ -46,6 +46,13 @@
     return v === '' ? NaN : Number(v);
   }
 
+  function pctContrapresion() {
+    const set = num('set');
+    const pback = num('pback');
+    const pct = (pback / set) * 100;
+    return (isFinite(pct) && set > 0) ? pct : 0;
+  }
+
   const CAMPOS = ['set', 'pback', 'temp', 'w', 'm', 'z', 'kk', 'q', 'g', 'mu', 'kw', 'dpin'];
 
   function validarCampo(id, opts) {
@@ -77,6 +84,7 @@
   /* ---------- fluidos ---------- */
   function poblarFluidos() {
     const f = root.FLUIDOS_BASE;
+    const actual = refs.fluido.value;
     refs.fluido.innerHTML = '';
     for (const fluido of f) {
       const op = document.createElement('option');
@@ -88,6 +96,8 @@
     pers.value = 'custom';
     pers.textContent = t('fl_custom');
     refs.fluido.appendChild(pers);
+    const existe = Array.prototype.some.call(refs.fluido.options, function (op) { return op.value === actual; });
+    refs.fluido.value = existe ? actual : refs.fluido.options[0].value;
   }
 
   function nombreFluido() {
@@ -132,6 +142,7 @@
       set: num('set'),
       sobrepresionPct: Number(refs.sobrepresion.value),
       pback: num('pback'),
+      contrapresionPct: pctContrapresion(),
       temp: num('temp'),
       tipoValvula: refs.tipov.value,
       Kc: Number(refs.kc.value),
@@ -363,6 +374,12 @@
 
   /* ---------- eventos reactivos ---------- */
   refs.fluido.addEventListener('change', function () { aplicarFluido(); recalcular(); });
+  ['m', 'z', 'kk'].forEach(function (id) {
+    const el = $(id);
+    if (el) el.addEventListener('input', function () {
+      if (refs.fluido.value !== 'custom') refs.fluido.value = 'custom';
+    });
+  });
   CAMPOS.forEach(function (id) {
     const el = $(id);
     if (el) el.addEventListener('input', recalcular);
