@@ -10,10 +10,12 @@ require('../js/orifices.js');
 require('../js/fluids.js');
 require('../js/api520.js');
 require('../js/i18n.js');
+require('../js/datasheet.js');
 
 const A = globalThis.API520;
 const FLUIDOS = globalThis.FLUIDOS_BASE;
 const I18N = globalThis.I18N;
+const DS = globalThis.Datasheet;
 
 const tests = [];
 function t(name, fn) { tests.push([name, fn]); }
@@ -261,6 +263,44 @@ t('dimensionarGas convencional: contrapresionPct=30% → Kb=1.000', () => {
 t('dimensionarVapor fuelle: contrapresionPct=30% → Kb≈0.950', () => {
   const r = A.dimensionarVapor({ W: 5000, set: 100, sobrepresionPct: 10, P2: 44.7, contrapresionPct: 30, T: 400, saturado: true, Kc: 1, tipoValvula: 'fuelle' });
   assert.ok(Math.abs(r.Kb - 0.950) <= 0.001, 'Kb=' + r.Kb);
+});
+
+// ---- Margen operación–ajuste (entrada opcional, aviso de cumplimiento) ----
+
+t('marginCheck: anclas (100,85)=15.0 ok · (100,92)=8.0 warn-low · (100,70)=30.0 ok-fluct · invalid · none · (150,120)=20.0 ok', () => {
+  let m = A.marginCheck(100, 85);
+  assert.equal(m.margin_pct.toFixed(1), '15.0');
+  assert.equal(m.level, 'ok');
+  m = A.marginCheck(100, 92);
+  assert.equal(m.margin_pct.toFixed(1), '8.0');
+  assert.equal(m.level, 'warn-low');
+  m = A.marginCheck(100, 70);
+  assert.equal(m.margin_pct.toFixed(1), '30.0');
+  assert.equal(m.level, 'ok-fluct');
+  assert.equal(A.marginCheck(100, 100).level, 'invalid');
+  assert.equal(A.marginCheck(100, 110).level, 'invalid');
+  assert.equal(A.marginCheck(100, null).level, 'none');
+  m = A.marginCheck(150, 120);
+  assert.equal(m.margin_pct.toFixed(1), '20.0');
+  assert.equal(m.level, 'ok');
+});
+
+t('marginCheck: bordes 10 % → ok, 25 % → ok-fluct, vacío (null/undefined/NaN) → none', () => {
+  assert.equal(A.marginCheck(100, 90).level, 'ok');
+  assert.equal(A.marginCheck(100, 75).level, 'ok-fluct');
+  assert.equal(A.marginCheck(100, NaN).level, 'none');
+  assert.equal(A.marginCheck(100, undefined).level, 'none');
+});
+
+t('Datasheet: con pop informada añade P_op y margen; sin pop omite las filas (sin "undefined")', () => {
+  const r = A.dimensionarGas({ W: 5000, set: 100, sobrepresionPct: 10, P2: 14.7, T: 559.67, Z: 1, M: 18.5, k: 1.25, Kc: 1, tipoValvula: 'convencional' });
+  const entrada = { modo: 'gas', fluido: 'Prueba', set: 100, sobrepresionPct: 10, pback: 0, contrapresionPct: 0, temp: 100, tipoValvula: 'convencional', Kc: 1, dpin: 0, saturado: true, W: 5000, M: 18.5, Z: 1, k: 1.25, pop: 85 };
+  const con = DS.construirTexto(r, entrada, 'Prueba');
+  assert.ok(con.indexOf('Presion de operacion') !== -1, 'falta fila P_op');
+  assert.ok(con.indexOf('15.0 %') !== -1, 'falta margen op-ajuste');
+  assert.ok(con.indexOf('undefined') === -1, 'no debe imprimir undefined');
+  const sin = DS.construirTexto(r, Object.assign({}, entrada, { pop: null }), 'Prueba');
+  assert.ok(sin.indexOf('Presion de operacion') === -1, 'no debe incluir fila P_op si está vacía');
 });
 
 // ---- Ejecución ----

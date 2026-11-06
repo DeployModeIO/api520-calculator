@@ -293,6 +293,28 @@
     };
   }
 
+  // Margen operación–ajuste (regla de pulgar API 520/576 para vida del asiento,
+  // "simulating flow"). pOp vacío/null/NaN → "none" (opcional, sin aviso);
+  // pOp ≥ pSet → "invalid" (abriría en operación normal); margen < 10 % →
+  // "warn-low" (riesgo de desgaste del asiento); 10–25 % → "ok" (solo presión
+  // ESTABLE); ≥ 25 % → "ok-fluct" (tolera fluctuaciones). Aviso, no bloquea.
+  function marginCheck(pSet_psig, pOp_psig) {
+    if (pOp_psig === null || pOp_psig === undefined ||
+        (typeof pOp_psig === 'number' && !isFinite(pOp_psig))) {
+      return { margin_pct: null, level: 'none' };
+    }
+    assertNum(pSet_psig, 'pSet_psig');
+    if (pSet_psig <= 0) throw new Error('pSet_psig debe ser > 0');
+    assertNum(pOp_psig, 'pOp_psig');
+    const margin_pct = ((pSet_psig - pOp_psig) / pSet_psig) * 100;
+    let level;
+    if (pOp_psig >= pSet_psig) level = 'invalid';
+    else if (margin_pct < 10) level = 'warn-low';
+    else if (margin_pct < 25) level = 'ok';
+    else level = 'ok-fluct';
+    return { margin_pct: margin_pct, level: level };
+  }
+
   /* ---------- API pública ---------- */
   root.API520 = {
     coeficienteExpansionC: coeficienteExpansionC,
@@ -312,6 +334,7 @@
     seleccionarOrificio: seleccionarOrificio,
     dimensionarGas: dimensionarGas,
     dimensionarLiquido: dimensionarLiquido,
+    marginCheck: marginCheck,
     orificios: ORIFICIOS,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

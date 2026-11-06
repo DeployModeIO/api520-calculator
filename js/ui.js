@@ -53,7 +53,7 @@
     return (isFinite(pct) && set > 0) ? pct : 0;
   }
 
-  const CAMPOS = ['set', 'pback', 'temp', 'w', 'm', 'z', 'kk', 'q', 'g', 'mu', 'kw', 'dpin'];
+  const CAMPOS = ['set', 'pop', 'pback', 'temp', 'w', 'm', 'z', 'kk', 'q', 'g', 'mu', 'kw', 'dpin'];
 
   function validarCampo(id, opts) {
     const el = $(id);
@@ -68,6 +68,18 @@
     el.classList.toggle('invalid', !!msg);
     if (errEl) errEl.textContent = msg;
     return !msg;
+  }
+
+  function validarCampoOpcional(id, opts) {
+    const el = $(id);
+    const v = el.value.trim().replace(',', '.');
+    if (v === '') {
+      el.classList.remove('invalid');
+      const errEl = $('err-' + id);
+      if (errEl) errEl.textContent = '';
+      return true;
+    }
+    return validarCampo(id, opts);
   }
 
   function limpiarErrores() {
@@ -136,6 +148,7 @@
 
   /* ---------- recolección de entrada ---------- */
   function recolectar() {
+    const popVal = num('pop');
     return {
       modo: estado.modo,
       fluido: nombreFluido(),
@@ -147,6 +160,7 @@
       tipoValvula: refs.tipov.value,
       Kc: Number(refs.kc.value),
       dpin: num('dpin'),
+      pop: isFinite(popVal) ? popVal : null,
       saturado: refs.estvapo.value === 'saturado',
       W: num('w'), M: num('m'), Z: num('z'), k: num('kk'),
       Q: num('q'), G: num('g'), mu: num('mu'), Kw: num('kw'),
@@ -246,6 +260,7 @@
 
     let ok = true;
     ok = validarCampo('set', { min: 0.1 }) && ok;
+    ok = validarCampoOpcional('pop', { min: 0 }) && ok;
     ok = validarCampo('pback', { min: 0 }) && ok;
     ok = validarCampo('temp', { min: -459 }) && ok;
     ok = validarCampo('dpin', { min: 0 }) && ok;
@@ -289,6 +304,12 @@
       if (entrada.tipoValvula === 'fuelle' && entrada.pback > 0.5 * entrada.set) {
         avisos.push(t('warn_fuelle50'));
       }
+      // Margen operación–ajuste: vida del asiento (simulating flow). Entrada opcional.
+      const mc = API520.marginCheck(entrada.set, entrada.pop);
+      if (mc.level === 'invalid') avisos.push(t('warn_margin_invalid'));
+      else if (mc.level === 'warn-low') avisos.push(t('warn_margin_low'));
+      else if (mc.level === 'ok') avisos.push(t('warn_margin_ok'));
+      else if (mc.level === 'ok-fluct') avisos.push(t('warn_margin_fluct'));
       mostrarAvisos(avisos);
     } catch (e) {
       const msg = e.message || 'Error';
@@ -350,6 +371,9 @@
     });
     document.querySelectorAll('[data-i18n-aria]').forEach(function (el) {
       el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(function (el) {
+      el.setAttribute('title', t(el.getAttribute('data-i18n-title')));
     });
     poblarFluidos();
     actualizarTipoV();

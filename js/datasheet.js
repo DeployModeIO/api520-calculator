@@ -41,6 +41,14 @@
     L.push(linea('-'));
     L.push(' ' + ds('ds_cond'));
     L.push(campo(ds('ds_set'), entrada.set.toFixed(2) + ' psig'));
+    if (entrada.pop !== null && entrada.pop !== undefined && isFinite(entrada.pop)) {
+      L.push(campo(ds('ds_pop'), entrada.pop.toFixed(2) + ' psig'));
+      const mc = (root.API520 && root.API520.marginCheck)
+        ? root.API520.marginCheck(entrada.set, entrada.pop) : null;
+      if (mc && mc.margin_pct !== null) {
+        L.push(campo(ds('ds_margin_op'), mc.margin_pct.toFixed(1) + ' %'));
+      }
+    }
     L.push(campo(ds('ds_sobrep'), entrada.sobrepresionPct + ' %'));
     L.push(campo(ds('ds_p1'), r.P1.toFixed(2) + ' psia'));
     L.push(campo(ds('ds_p2'), (entrada.pback + 14.7).toFixed(2) + ' psia (' + entrada.pback + ' psig)'));

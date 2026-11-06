@@ -6,8 +6,8 @@
 
 Aplicación web estática, sin backend y 100 % offline: panel HMI industrial en tema claro (por defecto) y tema oscuro Solarized, bilingüe ES/EN, instalable como PWA y con hoja de especificación exportable.
 
-[![Versión](https://img.shields.io/badge/versi%C3%B3n-1.3.0-16385e)](CHANGELOG.md)
-[![Tests](https://img.shields.io/badge/tests-30%2F30-10b981)](tests/run.js)
+[![Versión](https://img.shields.io/badge/versi%C3%B3n-1.4.0-16385e)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-33%2F33-10b981)](tests/run.js)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-0f2a4a)](LICENSE)
 [![Offline](https://img.shields.io/badge/offline-PWA-0369a1)](manifest.json)
 [![Dependencias](https://img.shields.io/badge/dependencias-0-ea580c](#rendimiento-offline-y-privacidad)
@@ -23,6 +23,7 @@ Aplicación web estática, sin backend y 100 % offline: panel HMI industrial en 
 - [Motor de cálculo](#motor-de-cálculo)
 - [Unidades y conversiones](#unidades-y-conversiones)
 - [Selección de orificio API 526](#selección-de-orificio-api-526)
+- [Avisos de cumplimiento](#avisos-de-cumplimiento)
 - [Supuestos, aproximaciones y límites](#supuestos-aproximaciones-y-límites)
 - [Arquitectura](#arquitectura)
 - [Estructura del proyecto](#estructura-del-proyecto)
@@ -67,6 +68,8 @@ Vista completa del panel (clic para abrir la imagen a tamaño real):
 | ![Interfaz en inglés](docs/screenshots/09-idioma-ingles.png) | ![Hoja de especificación](docs/screenshots/10-hoja-especificacion.png) |
 | **Validación reactiva inline** | **Tooltip del gráfico de capacidad** |
 | ![Validación](docs/screenshots/11-validacion-reactiva.png) | ![Tooltip](docs/screenshots/12-grafico-tooltip.png) |
+| **Margen operación–ajuste — OK estable (15 %)** | **Margen bajo — riesgo de simulating flow (8 %)** |
+| ![Margen operación–ajuste OK estable](docs/screenshots/14-margen-ok-estable.png) | ![Margen bajo, riesgo de simulating flow](docs/screenshots/15-margen-simulating-flow.png) |
 
 Guía visual del recorrido de uso:
 
@@ -107,7 +110,7 @@ flowchart LR
 - **Selección automática de orificio API 526** (D–T) con capacidad real, uso y margen.
 - **Gráficos Canvas nativos**, sin librerías: donut de uso del orificio y barras de capacidad certificada a 10 / 16 / 21 % de sobrepresión, con tooltip.
 - **Hoja de especificación** estilo API 520 / ISA S20: copiar al portapapeles, exportar PDF (jsPDF por CDN con *fallback* a impresión) e imprimir.
-- **Validación reactiva inline** para valores vacíos, no numéricos y fuera de rango, más avisos de cumplimiento (regla del 3 % de ΔP de entrada y límite del 50 % de contrapresión en fuelle).
+- **Validación reactiva inline** para valores vacíos, no numéricos y fuera de rango, más avisos de cumplimiento (regla del 3 % de ΔP de entrada, límite del 50 % de contrapresión en fuelle y margen operación–ajuste).
 - **Bilingüe ES/EN** con preferencia persistente y **tema claro / Solarized oscuro** persistente en `localStorage`.
 - **11 fluidos precargados editables**: metano, etano, propano, butano, gas natural típico, hidrógeno, nitrógeno, agua/vapor, gasolina, diésel y Jet A1.
 - **PWA instalable** con service worker cache-first y funcionamiento offline tras la primera visita.
@@ -208,6 +211,39 @@ Vapor saturado: `Ksh = 1.0`.
 
 > La contrapresión se normaliza como `P_back / P_set × 100`, que es el eje de la curva API 520 Fig. 30. La corrección se aplicó en la v1.3.0; antes la UI no enviaba ese porcentaje al motor y una válvula de fuelle con 30 psig y set 100 psig mostraba `Kb = 1.000` en lugar de `0.950`.
 
+### Margen operación–ajuste (entrada opcional): vida del asiento
+
+Novedad v1.4.0. Entrada **opcional** "Presión de operación (psig)" junto a la presión de ajuste, visible en los tres modos (gas/vapor, vapor ASME, líquido). **No participa del dimensionamiento** (área y capacidad no cambian): alimenta un aviso de cumplimiento sobre la vida del asiento ("simulating flow").
+
+Contrato del motor — función pura, sin DOM, testeable en Node:
+
+```text
+API520.marginCheck(pSet_psig, pOp_psig) → { margin_pct, level }
+
+margin_pct = (pSet − pOp) / pSet × 100        [psig, ambas manométricas]
+```
+
+| Condición | `level` | Semántica (regla de pulgar API 520/576) |
+|---|---|---|
+| pOp vacía / `null` / `NaN` | `none` | campo opcional: sin aviso |
+| pOp ≥ pSet | `invalid` | la válvula abriría en operación normal |
+| margen < 10 % | `warn-low` | riesgo de simulating flow y desgaste del asiento |
+| 10 % ≤ margen < 25 % | `ok` | correcto solo si la presión de operación es ESTABLE |
+| margen ≥ 25 % | `ok-fluct` | adecuado incluso con fluctuaciones normales |
+
+Comparación exacta en los bordes: margen = 10.0 % → `ok`, margen = 25.0 % → `ok-fluct` (testado). Anclas de la suite:
+
+| pSet [psig] | pOp [psig] | margen | nivel |
+|---:|---:|---:|---|
+| 100 | 85 | 15.0 % | `ok` |
+| 100 | 92 | 8.0 % | `warn-low` |
+| 100 | 70 | 30.0 % | `ok-fluct` |
+| 100 | 100 / 110 | ≤ 0 % | `invalid` |
+| 100 | — (vacía) | — | `none` |
+| 150 | 120 | 20.0 % | `ok` |
+
+Integración: la UI pasa `null` cuando el campo está vacío; el aviso usa el mismo patrón no bloqueante de la regla del 3 % y del límite del 50 % de fuelle; la hoja de especificación añade las filas `Presion de operacion` y `Margen operacion-ajuste` solo si pOp está informada (nunca imprime "undefined"). La UI rechaza valores negativos con error inline.
+
 ## Unidades y conversiones
 
 | Magnitud | Entrada UI | Motor | Salida |
@@ -245,6 +281,34 @@ W_real     = capacidad certificada con el área del orificio seleccionado
 ```
 
 Si el área requerida supera el orificio T (26.00 in²), la app muestra un error explícito.
+
+## Avisos de cumplimiento
+
+La app muestra tres avisos **no bloqueantes** (el cálculo siempre se ejecuta; el aviso aparece en la banda de la tarjeta de entrada):
+
+- **Regla del 3 % de ΔP de entrada (API 520/521)**: si la pérdida de presión de entrada supera el 3 % de la presión de ajuste, la capacidad certificada puede verse reducida; el aviso indica el máximo permitido.
+- **Contrapresión > 50 % del ajuste en fuelle balanceada**: por encima de ese límite la válvula de fuelle pierde capacidad garantizada; se sugiere una válvula pilotada (POSRV).
+- **Margen operación–ajuste (vida del asiento, "simulating flow", API 520/576)**: entrada **opcional** de presión de operación (psig) junto a la presión de ajuste. Si la válvula trabaja en operación normal demasiado cerca de su punto de tarado, el disco se acerca al asiento y se produce desgaste (fuga). El campo vacío no produce ningún aviso.
+
+Niveles del margen operación–ajuste:
+
+| Margen = (p_set − p_op) / p_set | Nivel | Interpretación |
+|---|---|---|
+| p_op sin informar | none | campo opcional: sin aviso |
+| p_op ≥ p_set | invalid | la válvula abriría en operación normal |
+| < 10 % | warn-low | riesgo de simulating flow y desgaste del asiento |
+| 10 % – 25 % | ok | correcto solo si la presión de operación es estable |
+| ≥ 25 % | ok-fluct | adecuado incluso con fluctuaciones de presión |
+
+Fórmula en psig (ambas presiones manométricas). La hoja de especificación imprime el margen a 1 decimal (la UI comunica el nivel mediante el aviso, no con cifras); las filas de P_op y margen solo se imprimen cuando p_op está informada (nunca aparece "undefined"). Si p_op ≥ p_set, el margen impreso es negativo y la UI muestra el aviso de nivel `invalid`. La entrada rechaza valores negativos.
+
+![Aviso de margen operación–ajuste con el campo opcional, en tema oscuro](docs/screenshots/13-aviso-margen-op-oscuro.png)
+
+Ejemplos reales de la app (v1.4.0) — nivel `invalid` y hoja de especificación con las filas nuevas:
+
+| Nivel `invalid`: p_op ≥ p_set | Hoja de especificación con P_op y margen |
+|---|---|
+| ![Margen inválido: la presión de operación supera la de ajuste](docs/screenshots/16-margen-invalido.png) | ![Hoja de especificación con Presion de operacion y Margen operacion-ajuste](docs/screenshots/17-datasheet-pop-margen.png) |
 
 ## Supuestos, aproximaciones y límites
 
@@ -311,10 +375,10 @@ api520-calculator/
 │   ├── banner.svg
 │   ├── diagrama-flujo.svg
 │   ├── guia-visual.png
-│   └── screenshots/           # 13 capturas reales de la app
+│   └── screenshots/           # 18 capturas reales de la app
 ├── icons/icon.svg
 ├── manifest.json              # PWA
-├── sw.js                      # Service worker (cache v11)
+├── sw.js                      # Service worker (cache v12)
 ├── CHANGELOG.md
 ├── LICENSE
 └── README.md
@@ -357,7 +421,7 @@ npx electron-packager . CalculadoraAPI520 --platform=win32 --arch=x64 --out=dist
 node tests/run.js
 ```
 
-Suite TDD sin framework (`node:assert/strict`) con **30 casos**:
+Suite TDD sin framework (`node:assert/strict`) con **33 casos**:
 
 | Grupo | Casos | Qué cubre |
 |---|---:|---|
@@ -369,18 +433,19 @@ Suite TDD sin framework (`node:assert/strict`) con **30 casos**:
 | Fluidos | 2 | Catálogo completo y correcciones (etano, Jet A1, diésel) |
 | i18n | 1 | Paridad de claves ES/EN no vacías |
 | Validaciones | 5 | `Z`, `k`, `P1`, subcrítico exige más área, errores numéricos |
+| Margen operación–ajuste | 3 | Anclas y bordes de `marginCheck`, filas condicionales del datasheet |
 
 Salida esperada:
 
 ```text
-30/30 tests OK — todo verde
+33/33 tests OK — todo verde
 ```
 
 ## Rendimiento, offline y privacidad
 
 - **Sin backend ni telemetría**: no hay peticiones de datos; la única petición externa opcional es jsPDF al exportar PDF.
 - **Sin dependencias de runtime**: el núcleo pesa ~50 KB de JS sin minificar; los gráficos son Canvas 2D nativo.
-- **Service worker cache-first** con precache del núcleo (HTML, CSS, JS, manifest e icono) y limpieza de cachés antiguas al activar (`bpi-api520-v11`).
+- **Service worker cache-first** con precache del núcleo (HTML, CSS, JS, manifest e icono) y limpieza de cachés antiguas al activar (`bpi-api520-v12`).
 - **Persistencia local** únicamente de idioma y tema (`localStorage`); no se guardan datos de proceso.
 - **Apto para equipos aislados** (Toughbook, tablet de campo, red segmentada) una vez cargada la app.
 

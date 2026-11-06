@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.4.0 (2026-11-06)
+
+### Nuevo: presión de operación opcional con aviso de margen (vida del asiento)
+
+- Entrada opcional "Presión de operación (psig)" visible en los 3 modos (gas/vapor, vapor ASME, líquido), junto a la presión de ajuste. Vacía = sin aviso (no molesta).
+- Nueva función pura `API520.marginCheck(pSet, pOp)` → `{ margin_pct, level }` con niveles none / invalid / warn-low / ok / ok-fluct según el margen (p_set − p_op) / p_set (regla de pulgar API 520/576 sobre simulating flow y desgaste del asiento).
+- Aviso de cumplimiento NO bloqueante (mismo patrón que la regla del 3 % y el límite del 50 % de fuelle), con tooltip explicativo.
+- Hoja de especificación: filas P_op y margen operación–ajuste solo si la presión está informada (nunca "undefined").
+- i18n ES/EN con paridad verificada · PWA: caché del service worker a `bpi-api520-v12`.
+
+### Pruebas
+
+- 3 tests nuevos: anclas exactas de marginCheck, bordes 10 %/25 %/vacío, y filas condicionales del datasheet. Suite total: **33/33 tests OK**.
+
+### Documentación e imágenes
+
+- README: nueva sección técnica `### Margen operación–ajuste` dentro de "Motor de cálculo" (contrato de la función, fórmula, tabla de niveles, bordes exactos, anclas de la suite y notas de integración) y galería de capturas ampliada (`docs/screenshots/13–17`).
+- Conjunto de 8 capturas para LinkedIn en `marketing/` (06–13) con post listo para publicar (`linkedin-post-v140.md`).
+
 ## v1.3.0 (2026-10-20)
 
 ### Correcciones de cálculo y UI
